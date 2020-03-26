@@ -15,14 +15,14 @@ radii = 2.0/255.0
 
 def pr(rad):
     if dataset != 'mnist':
-        return f'{rad*255:.2}/255'
+        return f'{rad*255:.3}/255'
     else:
         return f'{rad:.3}'
 
 if __name__ == '__main__':
     ds = datasets.get_dataset(dataset, 'test')
     print(dataset)
-    m = model.load_model(series, dataset, selector)
+    m = model.load_model(source, dataset, selector)
     print(m)
 
     from adaptor.basic_adaptor import CleanAdaptor, PGDAdaptor, FastLinIBPAdaptor, MILPAdaptor, PercySDPAdaptor
@@ -54,8 +54,8 @@ if __name__ == '__main__':
         # milp_radius = milp.calc_radius(X, y, norm, eps=1e-2)
         # sdp_v = sdp.verify(X, y, norm, radii)
         # sdp_radius = sdp.calc_radius(X, y, norm)
-        # lpdual_v = lpdual.verify(X, y, norm, radii)
-        # lpdual_radius = lpdual.calc_radius(X, y, norm)
+        lpdual_v = lpdual.verify(X, y, norm, radii)
+        lpdual_radius = lpdual.calc_radius(X, y, norm)
 
         fullcrown_v = fullcrown.verify(X, y, norm, radii)
         fullcrown_radius = fullcrown.calc_radius(X, y, norm)
@@ -73,8 +73,8 @@ if __name__ == '__main__':
               # 'milp_r', pr(milp_radius),
               # 'sdp', sdp_v,
               # 'sdp_r', pr(sdp_radius),
-              # 'lpdual', lpdual_v,
-              # 'lpdual_r', pr(lpdual_radius),
+              'lpdual', lpdual_v,
+              'lpdual_r', pr(lpdual_radius),
               'crown', fullcrown_v,
               'crown_r', pr(fullcrown_radius),
               'crownibp', crownibp_v,
