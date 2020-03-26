@@ -1,0 +1,7 @@
+dataset_cache/
+models_weights/
+__pycache__/
+.idea/
+*.pyc
+*~
+*.swp
