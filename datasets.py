@@ -41,6 +41,16 @@ def get_num_classes(dataset: str):
         return 10
 
 
+def get_input_shape(dataset: str):
+    """Return a list of integer indicating the input shape as (num_channel, height, weight)"""
+    if dataset == "imagenet":
+        return (3, 224, 224)
+    elif dataset == 'cifar10':
+        return (3, 32, 32)
+    elif dataset == 'mnist':
+        return (1, 28, 28)
+
+
 def _mnist(split: str) -> Dataset:
     if split == "train":
         return datasets.MNIST("./dataset_cache", train=True, download=True, transform=transforms.ToTensor())

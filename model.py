@@ -1,6 +1,7 @@
 
 import models.test_model
 import models.crown_ibp_model
+import models.recurjac_model
 
 model_table = {
     "test": {
@@ -38,9 +39,47 @@ model_table = {
             'dm.2': lambda: models.crown_ibp_model.ibp_cifar_large('2'),
             'dm.8': lambda: models.crown_ibp_model.ibp_cifar_large('8'),
         }
+    },
+    "fastlin": {
+        'mnist': {
+            '2.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('fastlin', 'mnist', 2, 'relu', 20, 'best'),
+            '2.1024.reg': lambda: models.recurjac_model.abstract_load_keras_model('fastlin', 'mnist', 2, 'relu', 1024, 'best'),
+            '3.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('fastlin', 'mnist', 3, 'relu', 20, 'best'),
+            '3.1024.adv': lambda: models.recurjac_model.abstract_load_keras_model('fastlin', 'mnist', 3, 'relu', 1024, 'adv_retrain'),
+            '4.1024.reg': lambda: models.recurjac_model.abstract_load_keras_model('fastlin', 'mnist', 4, 'relu', 1024, 'best'),
+            '4.1024.adv': lambda: models.recurjac_model.abstract_load_keras_model('fastlin', 'mnist', 4, 'relu', 1024, 'adv_retrain'),
+        },
+        'cifar10': {
+            '5.2048.reg': lambda: models.recurjac_model.abstract_load_keras_model('fastlin', 'cifar', 5, 'relu', 2048, 'best'),
+            '6.2048.reg': lambda: models.recurjac_model.abstract_load_keras_model('fastlin', 'cifar', 6, 'relu', 2048, 'best'),
+            '7.1024.reg': lambda: models.recurjac_model.abstract_load_keras_model('fastlin', 'cifar', 7, 'relu', 1024, 'best'),
+        }
+    },
+    'recurjac': {
+        'mnist': {
+            '2.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 2, 'leaky', 20),
+            '3.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 3, 'leaky', 20),
+            '3.1024.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 3, 'relu', 1024),
+            '3.1024.adv': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 3, 'relu', 1024, 'adv_retrain'),
+            '4.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 4, 'leaky', 20),
+            '4.1024.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 4, 'relu', 1024),
+            '4.1024.adv': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 4, 'relu', 1024, 'adv_retrain'),
+            '5.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 5, 'leaky', 20),
+            '5.50.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 5, 'tanh', 50),
+            '6.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 6, 'leaky', 20),
+            '7.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 7, 'leaky', 20),
+            '7.1024.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 4, 'relu', 1024),
+            '8.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 8, 'leaky', 20),
+            '9.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 9, 'leaky', 20),
+            '10.20.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'mnist', 10, 'leaky', 20),
+        },
+        'cifar10': {
+            '10.2048.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'cifar', 10, 'relu', 2048),
+        }
     }
 }
 
 
 def load_model(approach, dataset, tag='default'):
     return model_table[approach][dataset][tag]()
+

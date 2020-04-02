@@ -102,6 +102,9 @@ def model_transform(model, in_shape):
         elif isinstance(l, NormalizeLayer):
             # ignore normalized layer, but need to guarantee that the std per channel is consistent
             assert max(l.orig_sds) == min(l.orig_sds)
+        elif isinstance(l, nn.Dropout):
+            # skip dropout layers since it is ignored in eval mode
+            pass
         else:
             raise Exception(f"Unsupported layer type: {type(l)}")
     new_model = nn.Sequential(*new_layers)
