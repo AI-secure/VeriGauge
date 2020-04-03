@@ -1,0 +1,5 @@
+libglpk_la-mc13d.lo: misc/mc13d.c /usr/include/stdc-predef.h misc/mc13d.h
+
+/usr/include/stdc-predef.h:
+
+misc/mc13d.h:

@@ -1,0 +1,5 @@
+libglpk_la-mc21a.lo: misc/mc21a.c /usr/include/stdc-predef.h misc/mc21a.h
+
+/usr/include/stdc-predef.h:
+
+misc/mc21a.h:

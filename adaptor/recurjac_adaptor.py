@@ -8,8 +8,9 @@ from recurjac.bound_spectral import spectral_bound
 from recurjac.utils import binary_search
 
 import datasets
+from datasets import NormalizeLayer
 from models.test_model import Flatten
-from adaptor.adaptor import Adaptor
+from adaptor.basic_adaptor import VerifierAdaptor
 from tensorflow import keras
 from tensorflow.keras import backend as K
 
@@ -83,12 +84,12 @@ class RecurBaseModel(NLayerModel):
         self.model.summary()
 
 
-class RecurJacBase(Adaptor):
+class RecurJacBase(VerifierAdaptor):
 
     def __init__(self, dataset, model):
         super(RecurJacBase, self).__init__(dataset, model)
 
-        self.model = RecurBaseModel(dataset, model)
+        self.model = RecurBaseModel(dataset, self.model)
 
         # the weights and bias are saved in lists: weights and bias
         # weights[i-1] gives the ith layer of weight and so on
@@ -106,25 +107,27 @@ class RecurJacBase(Adaptor):
 
     def verify(self, input, label, norm_type, radius) -> bool:
         norm = {'1': 1, '2': 2, 'inf': np.inf}[norm_type]
+        input = self.input_preprocess(input)
         preds = self.model.model.predict(input.unsqueeze(0).numpy())
         pred = preds[0]
         pred_label = np.argmax(pred, axis=0)
         if pred_label != label:
             return 0.0
         else:
+            m_radius = radius / self.coef
             input = input.numpy()
             if self.jacbndalg != 'disable':
                 robustness_lb = compute_bounds_integral(
                     self.weights, self.biases, pred_label, -1, input,
-                    pred, len(self.weights), norm, radius, self.lipsteps,
+                    pred, len(self.weights), norm, m_radius, self.lipsteps,
                     self.layerbndalg, self.jacbndalg, untargeted=True,
                     activation=self.model.activation,
                     activation_param=self.model.activation_param, lipsdir=self.lipsdir,
                     lipsshift=self.lipsshift)
-                return robustness_lb == radius
+                return robustness_lb == m_radius
             else:
                 gap_gx, _, _, _ = compute_bounds(self.weights, self.biases, pred_label, -1, input, pred,
-                                                 len(self.weights), norm, radius, self.layerbndalg, "disable",
+                                                 len(self.weights), norm, m_radius, self.layerbndalg, "disable",
                                                  untargeted=True, use_quad=False,
                                                  activation=self.model.activation,
                                                  activation_param=self.model.activation_param,
@@ -133,6 +136,7 @@ class RecurJacBase(Adaptor):
 
     def calc_radius(self, input, label, norm_type, upper=0.5, eps=1e-4) -> float:
         norm = {'1': 1, '2': 2, 'inf': np.inf}[norm_type]
+        input = self.input_preprocess(input)
         preds = self.model.model.predict(input.unsqueeze(0).numpy())
         pred = preds[0]
         pred_label = np.argmax(pred, axis=0)
@@ -167,6 +171,7 @@ class RecurJacBase(Adaptor):
                 # perform binary search
                 robustness_lb = binary_search(binary_search_cond, eps, max_steps=self.steps)
 
+            robustness_lb *= self.coef
             return robustness_lb
 
 
@@ -204,6 +209,7 @@ class SpectralAdaptor(RecurJacBase):
             input = input.numpy()
             robustness_lb, _ = spectral_bound(self.weights, self.biases, pred_label, -1, input, pred,
                                               len(self.weights), self.model.activation, norm, True)
+            robustness_lb *= self.coef
             return robustness_lb
 
 

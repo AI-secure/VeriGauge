@@ -34,7 +34,6 @@ class BasicAdaptor(Adaptor):
         if isinstance(self.model[0], NormalizeLayer):
             self.coef = min(self.model[0].orig_sds)
 
-
 class CleanAdaptor(BasicAdaptor):
     """
         ** Not a real attack **
@@ -94,7 +93,38 @@ class PGDAdaptor(BasicAdaptor):
         return adv_pred == label
 
 
-class RealAdaptorBase(BasicAdaptor):
+class VerifierAdaptor(BasicAdaptor):
+    """
+        This adaptor covers the detail about the troublesome normalization
+    """
+
+    def __init__(self, dataset, model):
+        super(VerifierAdaptor, self).__init__(dataset, model)
+        self.flayer = None
+
+        in_min, in_max = 0.0, 1.0
+        if isinstance(model[0], NormalizeLayer):
+            self.flayer, self.model = model
+            in_min = (in_min - max(self.flayer.orig_means))
+            in_max = (in_max - min(self.flayer.orig_means))
+            if in_min <= 0.0:
+                in_min = in_min / min(self.flayer.orig_sds)
+            else:
+                in_min = in_min / max(self.flayer.orig_sds)
+            if in_max <= 0.0:
+                in_max = in_max / max(self.flayer.orig_sds)
+            else:
+                in_max = in_max / min(self.flayer.orig_sds)
+        self.in_min, self.in_max = in_min, in_max
+
+    def input_preprocess(self, input):
+        if self.flayer is not None:
+            (_, height, width) = input.shape
+            input = (input - self.flayer.means.cpu().repeat(height, width, 1).permute(2, 0, 1)) / self.flayer.sds.cpu().repeat(height, width, 1).permute(2, 0, 1)
+        return input
+
+
+class RealAdaptorBase(VerifierAdaptor):
     """
         Base class for real verification approaches.
         It deals with input transformation, model transformation, etc
@@ -104,39 +134,11 @@ class RealAdaptorBase(BasicAdaptor):
     def __init__(self, dataset, model):
         super(RealAdaptorBase, self).__init__(dataset, model)
         self.new_model = None
-
-        flayer = self.model[0]
-        in_min, in_max = 0.0, 1.0
-        if isinstance(flayer, NormalizeLayer):
-            in_min = (in_min - max(flayer.orig_means))
-            in_max = (in_max - min(flayer.orig_means))
-            if in_min <= 0.0:
-                in_min = in_min / min(flayer.orig_sds)
-            else:
-                in_min = in_min / max(flayer.orig_sds)
-            if in_max <= 0.0:
-                in_max = in_max / max(flayer.orig_sds)
-            else:
-                in_max = in_max / min(flayer.orig_sds)
-        self.in_min, self.in_max = in_min, in_max
-
         self.bound = None
 
     def build_new_model(self, input):
         # the input is functioned as the canopy
-        if isinstance(self.model[0], NormalizeLayer) and isinstance(self.model[1], nn.Sequential):
-            # the model is concatenated with a normalized layer at the front
-            # just like what we did in models/test_model.py
-            self.new_model = model_transform(self.model[1], list(input.shape))
-        else:
-            self.new_model = model_transform(self.model, list(input.shape))
-
-    def input_preprocess(self, input):
-        flayer = self.model[0]
-        (_, height, width) = input.shape
-        if isinstance(flayer, NormalizeLayer):
-            input = (input - flayer.means.cpu().repeat(height, width, 1).permute(2, 0, 1)) / flayer.sds.cpu().repeat(height, width, 1).permute(2, 0, 1)
-        return input
+        self.new_model = model_transform(self.model, list(input.shape))
 
     def prepare_solver(self, in_shape):
         raise NotImplementedError
@@ -155,6 +157,7 @@ class RealAdaptorBase(BasicAdaptor):
             print("Init done, time", str(datetime.timedelta(seconds=(after - before))),)
 
         # firstly check the clean prediction
+        input = self.input_preprocess(input)
         xs = input.unsqueeze(0)
         clean_preds = self.model(xs.cuda()).detach().cpu().numpy()
         clean_pred = np.argmax(clean_preds[0])
@@ -162,7 +165,6 @@ class RealAdaptorBase(BasicAdaptor):
             return False
 
         m_radius = radius / self.coef
-        input = self.input_preprocess(input)
         input = input.contiguous().view(-1)
         self.bound.calculate_bound(input, m_radius)
 
@@ -179,12 +181,6 @@ class IBPAdaptor(RealAdaptorBase):
         Interval Bound Propagation
     """
     def prepare_solver(self, in_shape):
-        if isinstance(self.model[0], NormalizeLayer) and isinstance(self.model[1], nn.Sequential):
-            # the model is concatenated with a normalized layer at the front
-            # just like what we did in models/test_model.py
-            self.new_model = self.model[1]
-        else:
-            self.new_model = self.model
         self.bound = FastIntervalBound(self.new_model, in_shape, self.in_min, self.in_max)
 
     def verify(self, input, label, norm_type, radius):
@@ -203,6 +199,7 @@ class IBPAdaptor(RealAdaptorBase):
             print("Init done, time", str(datetime.timedelta(seconds=(after - before))),)
 
         # firstly check the clean prediction
+        input = self.input_preprocess(input)
         xs = input.unsqueeze(0)
         clean_preds = self.model(xs.cuda()).detach().cpu().numpy()
         clean_pred = np.argmax(clean_preds[0])
@@ -210,7 +207,6 @@ class IBPAdaptor(RealAdaptorBase):
             return False
 
         m_radius = radius / self.coef
-        input = self.input_preprocess(input)
         self.bound.calculate_bound(input, m_radius)
 
         for i in range(get_num_classes(self.dataset)):
@@ -260,6 +256,7 @@ class MILPAdaptor(RealAdaptorBase):
             print("Init done, time", str(datetime.timedelta(seconds=(after - before))), )
 
         # firstly check the clean prediction
+        input = self.input_preprocess(input)
         xs = input.unsqueeze(0)
         clean_preds = self.model(xs.cuda()).detach().cpu().numpy()
         clean_pred = np.argmax(clean_preds[0])
@@ -267,7 +264,6 @@ class MILPAdaptor(RealAdaptorBase):
             return False
 
         m_radius = radius / self.coef
-        input = self.input_preprocess(input)
 
         input = input.contiguous().view(-1)
         self.prebound.calculate_bound(input, m_radius)
@@ -312,6 +308,7 @@ class PercySDPAdaptor(RealAdaptorBase):
             print("Init done, time", str(datetime.timedelta(seconds=(after - before))), )
 
         # firstly check the clean prediction
+        input = self.input_preprocess(input)
         xs = input.unsqueeze(0)
         clean_preds = self.model(xs.cuda()).detach().cpu().numpy()
         clean_pred = np.argmax(clean_preds[0])
@@ -319,7 +316,6 @@ class PercySDPAdaptor(RealAdaptorBase):
             return False
 
         m_radius = radius / self.coef
-        input = self.input_preprocess(input)
 
         input = input.contiguous().view(-1)
         self.prebound.calculate_bound(input, m_radius)

@@ -1,0 +1,8 @@
+libglpk_la-jd.lo: misc/jd.c /usr/include/stdc-predef.h \
+ /usr/lib/gcc/x86_64-linux-gnu/7/include/stddef.h misc/jd.h
+
+/usr/include/stdc-predef.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/7/include/stddef.h:
+
+misc/jd.h:

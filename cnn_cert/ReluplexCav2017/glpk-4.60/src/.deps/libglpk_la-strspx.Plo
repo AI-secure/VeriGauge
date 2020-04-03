@@ -1,0 +1,6 @@
+libglpk_la-strspx.lo: misc/strspx.c /usr/include/stdc-predef.h \
+ misc/misc.h
+
+/usr/include/stdc-predef.h:
+
+misc/misc.h:

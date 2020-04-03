@@ -1,0 +1,6 @@
+libglpk_la-relax4.lo: misc/relax4.c /usr/include/stdc-predef.h \
+ misc/relax4.h
+
+/usr/include/stdc-predef.h:
+
+misc/relax4.h:

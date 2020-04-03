@@ -2,13 +2,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from adaptor.adaptor import Adaptor
+from adaptor.basic_adaptor import VerifierAdaptor
 from datasets import NormalizeLayer, get_num_classes
 
 from crown_ibp.bound_layers import BoundSequential
 
 
-class CrownAdaptorBase(Adaptor):
+class CrownAdaptorBase(VerifierAdaptor):
     """
         The base adaptor for CROWN framework
         Note that in constructor, we assume the unnormalized data range is 0 ~ 1
@@ -16,43 +16,8 @@ class CrownAdaptorBase(Adaptor):
 
     def __init__(self, dataset, model):
         super(CrownAdaptorBase, self).__init__(dataset, model)
-        self.model = model
-        self.new_model = None
-        # if the normalized layer exists,
-        # we need to calculate the norm scaling coefficient
-        # when the normalization layer is removed
-        # real radius with normalization can thus be figured out
-        self.coef = 1.0
-        if isinstance(self.model[0], NormalizeLayer):
-            self.coef = min(self.model[0].orig_sds)
-        self.build_new_model()
-
-        flayer = self.model[0]
-        in_min, in_max = 0.0, 1.0
-        if isinstance(flayer, NormalizeLayer):
-            in_min = (in_min - max(flayer.orig_means))
-            in_max = (in_max - min(flayer.orig_means))
-            if in_min <= 0.0:
-                in_min = in_min / min(flayer.orig_sds)
-            else:
-                in_min = in_min / max(flayer.orig_sds)
-            if in_max <= 0.0:
-                in_max = in_max / max(flayer.orig_sds)
-            else:
-                in_max = in_max / min(flayer.orig_sds)
-        self.in_min, self.in_max = in_min, in_max
-
         self.num_class = get_num_classes(dataset)
-
-    def build_new_model(self):
-        # the input is functioned as the canopy
-        if isinstance(self.model[0], NormalizeLayer) and isinstance(self.model[1], nn.Sequential):
-            # the model is concatenated with a normalized layer at the front
-            # just like what we did in models/test_model.py
-            self.new_model = self.model[1]
-        else:
-            self.new_model = self.model
-        self.new_model = BoundSequential.convert(self.new_model, {'same-slope': False})
+        self.new_model = BoundSequential.convert(self.model, {'same-slope': False})
 
     def input_preprocess(self, input):
         flayer = self.model[0]

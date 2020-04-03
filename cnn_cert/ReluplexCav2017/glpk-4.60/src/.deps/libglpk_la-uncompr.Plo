@@ -1,0 +1,8 @@
+libglpk_la-uncompr.lo: zlib/uncompr.c /usr/include/stdc-predef.h \
+ zlib/zlib.h zlib/zconf.h
+
+/usr/include/stdc-predef.h:
+
+zlib/zlib.h:
+
+zlib/zconf.h:
