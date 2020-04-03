@@ -8,8 +8,8 @@ import model
 APPROACH_LIST = ['PGD', 'IBP', 'FastLin', 'MILP', 'PercySDP', 'ZicoDual', 'CROWN', 'CROWN-IBP', 'LPAll' 'Diffai', 'RecurJac', 'FastLip']
 
 dataset = 'cifar10'
-source = 'crownibp'
-selector = 'dm.8'
+source = 'test'
+selector = 'small.2'
 skip = 500
 norm = 'inf'
 radii = 8.0 / 255.0

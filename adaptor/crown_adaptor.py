@@ -19,13 +19,6 @@ class CrownAdaptorBase(VerifierAdaptor):
         self.num_class = get_num_classes(dataset)
         self.new_model = BoundSequential.convert(self.model, {'same-slope': False})
 
-    def input_preprocess(self, input):
-        flayer = self.model[0]
-        (_, height, width) = input.shape
-        if isinstance(flayer, NormalizeLayer):
-            input = (input - flayer.means.cpu().repeat(height, width, 1).permute(2, 0, 1)) / flayer.sds.cpu().repeat(height, width, 1).permute(2, 0, 1)
-        return input
-
     def compute(self, model, norm, x_U, x_L, eps, C):
         raise NotImplementedError
         return None, None
