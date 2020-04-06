@@ -75,7 +75,19 @@ class MILPVerifier:
             now_shape = self.shapes[i + 1]
             now_y = cp.Variable(now_shape)
             now_a = cp.Variable(now_shape, boolean=True)
-            self.constraints.extend([(now_y <= now_x - cp.multiply((1 - now_a), l[i + 1])), (now_y >= now_x), (now_y <= cp.multiply(now_a, u[i + 1])), (now_y >= 0)])
+            for j in range(now_shape):
+                if l[i + 1][j] >= 0:
+                    self.constraints.extend([now_y[j] == now_x[j]])
+                elif u[i + 1][j] <= 0:
+                    self.constraints.extend([now_y[j] == 0.])
+                else:
+                    self.constraints.extend([
+                        (now_y[j] <= now_x[j] - (1 - now_a[j]) * l[i + 1][j]),
+                        (now_y[j] >= now_x[j]),
+                        (now_y[j] <= now_a[j] * u[i + 1][j]),
+                        (now_y[j] >= 0.)
+                    ])
+            # self.constraints.extend([(now_y <= now_x - cp.multiply((1 - now_a), l[i + 1])), (now_y >= now_x), (now_y <= cp.multiply(now_a, u[i + 1])), (now_y >= 0)])
             pre = now_y
         self.last_x = pre
 

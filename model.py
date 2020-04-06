@@ -4,6 +4,7 @@ import models.crown_ibp_model
 import models.recurjac_model
 import models.cnn_cert_model
 
+
 model_table = {
     "test": {
         'mnist': {
@@ -79,19 +80,37 @@ model_table = {
         }
     },
     'cnn_cert': {
-        'mnist': {x: lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_' + x) for x in
-                  ['2layer_fc_20', '3layer_fc_20', '4layer_fc_1024', 'cnn_7layer',
-                   'cnn_lenet', 'cnn_7layer_sigmoid', 'cnn_4layer_5_3_sigmoid',
-                   'cnn_4layer_5_3_tanh', 'cnn_7layer_tanh', 'cnn_8layer_5_3_sigmoid',
-                   'cnn_8layer_5_3_tanh', 'cnn_lenet_sigmoid', 'cnn_lenet_tanh',
-                  ]},
-        'cifar10': {x: lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_' + x) for x in
-                    ['4layer_fc_2048', '5layer_fc_1024', '5layer_fc_2048', 'cnn_7layer',
-                     '7layer_fc_1024', 'cnn_5layer_5_3_tanh', 'cnn_7layer_5_3_sigmoid',
-                     'cnn_7layer_sigmoid', 'cnn_7layer_5_3_tanh', 'cnn_7layer_tanh', 'cnn_5layer_5_3_sigmoid'
-                    ]}
+        'mnist': {
+            '2layer_fc_20': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_2layer_fc_20'),
+            '3layer_fc_20': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_3layer_fc_20'),
+            '4layer_fc_1024': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_4layer_fc_1024'),
+            'cnn_7layer': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_cnn_7layer'),
+            'cnn_lenet': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_cnn_lenet'),
+            'cnn_7layer_sigmoid': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_cnn_7layer_sigmoid'),
+            'cnn_4layer_5_3_sigmoid': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_cnn_4layer_5_3_sigmoid'),
+            'cnn_4layer_5_3_tanh': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_cnn_4layer_5_3_tanh'),
+            'cnn_7layer_tanh': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_cnn_7layer_tanh'),
+            'cnn_8layer_5_3_sigmoid': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_cnn_8layer_5_3_sigmoid'),
+            'cnn_8layer_5_3_tanh': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_cnn_8layer_5_3_tanh'),
+            'cnn_lenet_sigmoid': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_cnn_lenet_sigmoid'),
+            'cnn_lenet_tanh': lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_cnn_lenet_tanh'),
+        },
+        'cifar10': {
+            '4layer_fc_2048': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_4layer_fc_2048'),
+            '5layer_fc_1024': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_5layer_fc_1024'),
+            '5layer_fc_2048': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_5layer_fc_2048'),
+            'cnn_7layer': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_cnn_7layer'),
+            '7layer_fc_1024': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_7layer_fc_1024'),
+            'cnn_5layer_5_3_tanh': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_cnn_5layer_5_3_tanh'),
+            'cnn_7layer_5_3_sigmoid': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_cnn_7layer_5_3_sigmoid'),
+            'cnn_7layer_sigmoid': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_cnn_7layer_sigmoid'),
+            'cnn_7layer_5_3_tanh': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_cnn_7layer_5_3_tanh'),
+            'cnn_7layer_tanh': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_cnn_7layer_tanh'),
+            'cnn_5layer_5_3_sigmoid': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_cnn_5layer_5_3_sigmoid'),
+        }
     }
 }
+
 
 
 def load_model(approach, dataset, tag='default'):

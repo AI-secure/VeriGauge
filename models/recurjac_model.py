@@ -3,6 +3,7 @@ import json
 import torch
 import torch.nn as nn
 import tensorflow as tf
+import tensorflow.keras.backend as K
 
 import datasets
 from models.test_model import get_normalize_layer
@@ -114,3 +115,5 @@ def abstract_load_keras_model(folder, dataset, num_layer, activation, hidden_neu
     return load_keras_model(input_shape, path_str)
 
 
+# In Recurjac models, the image channels are the first...
+# K.set_image_data_format('channels_first')

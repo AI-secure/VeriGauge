@@ -3,6 +3,7 @@ import os
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import load_model
+import tensorflow.keras.backend as K
 
 import torch
 from torch import nn
@@ -133,6 +134,7 @@ model_root_path = 'models_weights/cnn_cert_models'
 
 
 def load_cnn_cert_model(fname):
+    print(f'Load model {fname}')
     # the real load function
     m = load_from_tf(os.path.join(model_root_path, fname))
 
@@ -232,3 +234,7 @@ cifar_models = [
 #         print(now, 'good')
 #     else:
 #         print('!!!', now, 'bad')
+
+
+# CNN-cert only supports the image channels to be the last...
+# K.set_image_data_format('channels_last')

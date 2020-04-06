@@ -88,7 +88,9 @@ def sequential_torch2keras(torch_model, dataset):
             assert meet_flatten is False
 
             new_layer = keras.layers.AvgPool2D(layer.kernel_size, layer.stride,
-                                               'valid' if layer.padding[0] == 0 else 'same', **kwargs)
+                                               'valid' if layer.padding[0] == 0 else 'same',
+                                               data_format='channels_last',
+                                               **kwargs)
             ret.add(new_layer)
 
         elif isinstance(layer, nn.MaxPool2d):
@@ -96,7 +98,8 @@ def sequential_torch2keras(torch_model, dataset):
             assert meet_flatten is False
 
             new_layer = keras.layers.MaxPool2D(layer.kernel_size, layer.stride,
-                                               'valid' if layer.padding[0] == 0 else 'same', **kwargs)
+                                               'valid' if layer.padding[0] == 0 else 'same',
+                                               data_format='channels_last', **kwargs)
             ret.add(new_layer)
 
         elif isinstance(layer, nn.ReLU):
@@ -115,7 +118,7 @@ def sequential_torch2keras(torch_model, dataset):
                 shape_before_flatten = new_input_shape
             else:
                 shape_before_flatten = ret.output_shape[1:]
-            ret.add(keras.layers.Flatten(**kwargs))
+            ret.add(keras.layers.Flatten(data_format='channels_last', **kwargs))
 
         elif isinstance(layer, nn.Linear) or isinstance(layer, FlattenConv2D):
             # print('  in dim', layer.in_features)
@@ -162,10 +165,30 @@ def check_consistency(model, k_model, input_shape) -> bool:
     model.eval()
     pred1 = model(torch.Tensor(data).unsqueeze(0).cuda()).cpu().detach().numpy()
     pred2 = k_model.predict(np.expand_dims(data.transpose((1,2,0)), 0))
+
+    # print(pred1)
+    # print(pred2)
+    # i1 = torch.Tensor(data).unsqueeze(0).cuda()
+    # i2 = np.expand_dims(data.transpose((1,2,0)), 0)
+    # print(i1)
+    # print(i2)
+    # for l in model:
+    #     print(l.__class__.__name__)
+    #     i1 = l(i1)
+    #     print(i1)
+    # for l in k_model.layers:
+    #     print(l.__class__.__name__)
+    #     i2 = l(i2)
+    #     try:
+    #         print(l.data_format)
+    #     except:
+    #         pass
+    #     print(K.get_value(i2))
+
     err = la.norm(pred1 - pred2)
     precision = err / la.norm(pred1)
     print(f'model difference: {precision*100.0:.3f}%')
-    return precision < 1E-4
+    return precision < 1E-3
 
 
 class CNNCertBase(VerifierAdaptor):
@@ -198,6 +221,12 @@ class CNNCertBase(VerifierAdaptor):
         new_input_shape = (input_shape[1], input_shape[2], input_shape[0])
         self.k_model = sequential_torch2keras(self.model, dataset)
 
+        print(self.k_model.summary())
+        try:
+            assert check_consistency(self.model, self.k_model, input_shape) == True
+        except:
+            raise Exception("Somehow the transformed model behaves differently from the original model.")
+
         self.new_model = Model(self.k_model, new_input_shape)
 
         # Set correct linear_bounds function
@@ -213,11 +242,6 @@ class CNNCertBase(VerifierAdaptor):
         elif self.activation == 'arctan':
             self.linear_bounds = atan_linear_bounds
 
-        # print(self.new_model.summary())
-        try:
-            check_consistency(self.model, self.k_model, input_shape)
-        except Exception:
-            raise Exception("Somehow the transformed model behaves differently from the original model.")
 
 
 class CNNCertAdaptor(CNNCertBase):
@@ -325,4 +349,4 @@ class LPAllAdaptor(FastLinSparseAdaptor):
 
 
 # CNN-cert only supports the image channels to be the last...
-K.set_image_data_format('channels_last')
+# K.set_image_data_format('channels_last')

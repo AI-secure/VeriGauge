@@ -13,7 +13,7 @@ from cleverhans.utils_pytorch import convert_pytorch_model_to_tf
 from datasets import NormalizeLayer, get_num_classes
 
 from basic.models import model_transform
-from basic.intervalbound import IntervalFastLinBound, FastIntervalBound
+from basic.intervalbound import IntervalFastLinBound, IntervalBound, FastIntervalBound
 from basic.milp import MILPVerifier
 from basic.percysdp import PercySDP
 
@@ -272,7 +272,11 @@ class MILPAdaptor(RealAdaptorBase):
         for i in range(get_num_classes(self.dataset)):
             if i != label:
                 self.bound.prepare_verify(label, i)
+                # try:
+                # self.bound.prob.solve(verbose=True)
                 self.bound.prob.solve(solver=cp.GUROBI, verbose=False)
+                # except:
+                #     return False
                 if self.bound.prob.status not in ['optimal'] or self.bound.prob.value < 0.:
                     return False
         return True

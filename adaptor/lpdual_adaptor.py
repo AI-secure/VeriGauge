@@ -39,7 +39,7 @@ class ZicoDualAdaptor(VerifierAdaptor):
 
         self.model.eval()
         torch.set_grad_enabled(False)
-        robust_ce, robust_err = robust_loss(self.new_model, m_radius, X, y, proj=False, norm_type=norm)
+        robust_ce, robust_err = robust_loss(self.model, m_radius, X, y, proj=False, norm_type=norm)
         torch.set_grad_enabled(True)
         # actually it could only be 0.0 or 1.0
         return robust_err < 0.5

@@ -42,7 +42,7 @@ class Adaptor():
                 l = mid
             else:
                 r = mid
-        return (l + r) / 2.0
+        return l
 
 
 
