@@ -8,11 +8,15 @@ import model
 APPROACH_LIST = ['PGD', 'IBP', 'FastLin', 'MILP', 'PercySDP', 'ZicoDual', 'CROWN', 'CROWN-IBP', 'LPAll' 'Diffai', 'RecurJac', 'FastLip']
 
 dataset = 'cifar10'
-source = 'test'
-selector = 'small.2'
+# source = 'test'
+# selector = 'small.2'
+# source = 'fastlin'
+# selector = '7.1024.reg'
+source = 'cnn_cert'
+selector = 'cnn_7layer_sigmoid'
 skip = 500
 norm = 'inf'
-radii = 8.0 / 255.0
+radii = 2.0 / 255.0
 
 def pr(rad):
     if dataset != 'mnist':
@@ -33,10 +37,10 @@ if __name__ == '__main__':
     from adaptor.crown_adaptor import IBPAdaptor
     from adaptor.recurjac_adaptor import FastLipAdaptor, RecurJacAdaptor, SpectralAdaptor
     from adaptor.recurjac_adaptor import FastLinAdaptor
-    from adaptor.cnncert_adaptor import CNNCertAdaptor
+    from adaptor.cnncert_adaptor import CNNCertAdaptor, FastLinSparseAdaptor
 
     cln = CleanAdaptor(dataset, m)
-    # pgd = PGDAdaptor(dataset, m)
+    pgd = PGDAdaptor(dataset, m)
     # ibp = IBPAdaptor(dataset, m)
     # fastlinibp = FastLinIBPAdaptor(dataset, m)
     # milp = MILPAdaptor(dataset, m)
@@ -49,13 +53,14 @@ if __name__ == '__main__':
     # spectral = SpectralAdaptor(dataset, m)
     # fastlin = FastLinAdaptor(dataset, m)
     cnncert = CNNCertAdaptor(dataset, m)
+    # fastlinsparse = FastLinSparseAdaptor(dataset, m)
 
     for i in range(0, len(ds), skip):
         X, y = ds[i]
 
         cln_v = cln.verify(X, y, norm, 0.0)
-        # pgd_v = pgd.verify(X, y, norm, radii)
-        # pgd_radius = pgd.calc_radius(X, y, norm)
+        pgd_v = pgd.verify(X, y, norm, radii)
+        pgd_radius = pgd.calc_radius(X, y, norm)
         # ibp_v = ibp.verify(X, y, norm, radii)
         # ibp_radius = ibp.calc_radius(X, y, norm)
         # fastlinibp_v = fastlinibp.verify(X, y, norm, radii)
@@ -67,10 +72,10 @@ if __name__ == '__main__':
         # lpdual_v = lpdual.verify(X, y, norm, radii)
         # lpdual_radius = lpdual.calc_radius(X, y, norm)
 
-        fullcrown_v = fullcrown.verify(X, y, norm, radii)
-        fullcrown_radius = fullcrown.calc_radius(X, y, norm)
-        crownibp_v = crownibp.verify(X, y, norm, radii)
-        crownibp_radius = crownibp.calc_radius(X, y, norm)
+        # fullcrown_v = fullcrown.verify(X, y, norm, radii)
+        # fullcrown_radius = fullcrown.calc_radius(X, y, norm)
+        # crownibp_v = crownibp.verify(X, y, norm, radii)
+        # crownibp_radius = crownibp.calc_radius(X, y, norm)
 
         # fastlip_v = fastlip.verify(X, y, norm, radii)
         # fastlip_radius = fastlip.calc_radius(X, y, norm)
@@ -81,9 +86,14 @@ if __name__ == '__main__':
         # fastlin_v = fastlin.verify(X, y, norm, radii)
         # fastlin_radius = fastlin.calc_radius(X, y, norm)
 
+        cnncert_v = cnncert.verify(X, y, norm, radii)
+        cnncert_radius = cnncert.calc_radius(X, y, norm)
+        # fstlinsparse_v = fastlinsparse.verify(X, y, norm, radii)
+        # fstlinsparse_radius = fastlinsparse.calc_radius(X, y, norm)
+
         print(i, 'clean', cln_v,
-              # 'pgd', pgd_v,
-              # 'pgd_r', pgd_radius,
+              'pgd', pgd_v,
+              'pgd_r', pr(pgd_radius),
               # 'ibp', ibp_v,
               # 'ibp_r', pr(ibp_radius),
               # 'fastlinibp', fastlinibp_v,
@@ -94,10 +104,10 @@ if __name__ == '__main__':
               # 'sdp_r', pr(sdp_radius),
               # 'lpdual', lpdual_v,
               # 'lpdual_r', pr(lpdual_radius),
-              'crown', fullcrown_v,
-              'crown_r', pr(fullcrown_radius),
-              'crownibp', crownibp_v,
-              'crownibp_r', pr(crownibp_radius),
+              # 'crown', fullcrown_v,
+              # 'crown_r', pr(fullcrown_radius),
+              # 'crownibp', crownibp_v,
+              # 'crownibp_r', pr(crownibp_radius),
               # 'fastlip', fastlip_v,
               # 'fastlip_r', pr(fastlip_radius),
               # 'recurjac', recurjac_v,
@@ -106,5 +116,9 @@ if __name__ == '__main__':
               # 'spectral_r', pr(spectral_radius),
               # 'fastlin', fastlin_v,
               # 'fastlin_r', pr(fastlin_radius),
+              'cnncert', cnncert_v,
+              'cnncert_r', pr(cnncert_radius),
+              # 'fstlinsparse', fstlinsparse_v,
+              # 'fstlinsparse_r', pr(fstlinsparse_radius),
               file=sys.stderr)
         # assert cln_v or not pgd_v

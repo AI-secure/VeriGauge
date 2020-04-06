@@ -41,7 +41,9 @@ class FlattenConv2D(nn.Module):
         b_cells = torch.numel(conv_bias)
 
         self.in_numel = in_cells
+        self.in_features = in_cells
         self.out_numel = out_cells
+        self.out_features = out_cells
 
         conv_weight = conv_weight.contiguous().view(w_cells)
 

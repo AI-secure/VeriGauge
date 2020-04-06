@@ -12,21 +12,21 @@ Copyright (C) 2018, Akhilan Boopathy <akhilan@mit.edu>
 from numba import njit, jit
 import numpy as np
 
-from setup_mnist import MNIST
-from setup_cifar import CIFAR
-from setup_tinyimagenet import tinyImagenet
-from cnn_bounds_full_core import pool, conv, conv_bound, conv_full, conv_bound_full, pool_linear_bounds
+from .setup_mnist import MNIST
+from .setup_cifar import CIFAR
+from .setup_tinyimagenet import tinyImagenet
+from .cnn_bounds_full_core import pool, conv, conv_bound, conv_full, conv_bound_full, pool_linear_bounds
 
 from tensorflow.contrib.keras.api.keras.models import Sequential
 from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Activation, Flatten, GlobalAveragePooling2D, Lambda
 from tensorflow.contrib.keras.api.keras.layers import Conv2D, MaxPooling2D, AveragePooling2D, InputLayer, BatchNormalization, Reshape
 from tensorflow.contrib.keras.api.keras.models import load_model
 from tensorflow.contrib.keras.api.keras import backend as K
-from train_resnet import ResidualStart, ResidualStart2
+from .train_resnet import ResidualStart, ResidualStart2
 import tensorflow as tf
-from utils import generate_data
+from .utils import generate_data
 import time
-from activations import relu_linear_bounds, ada_linear_bounds, atan_linear_bounds, sigmoid_linear_bounds, tanh_linear_bounds
+from .activations import relu_linear_bounds, ada_linear_bounds, atan_linear_bounds, sigmoid_linear_bounds, tanh_linear_bounds
 linear_bounds = None
 
 import random
@@ -561,11 +561,13 @@ def compute_bounds(weights, biases, out_shape, nlayer, x0, eps, p_n, pads, strid
     return LLB, UUB
 
 #Main function to find output bounds
-def find_output_bounds(weights, biases, shapes, pads, strides, sizes, types, x0, eps, p_n):
+def find_output_bounds(weights, biases, shapes, pads, strides, sizes, types, x0, eps, p_n, param_linear_bounds):
+    global linear_bounds
+    linear_bounds = param_linear_bounds
     LBs = [x0-eps]
     UBs = [x0+eps]
     for i in range(1,len(weights)+1):
-        print('Layer ' + str(i))
+        # print('Layer ' + str(i))
         LB, UB = compute_bounds(weights, biases, shapes[i], i, x0, eps, p_n, pads, strides, sizes, types, LBs, UBs)
         UBs.append(UB)
         LBs.append(LB)

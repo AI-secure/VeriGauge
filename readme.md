@@ -21,3 +21,5 @@ We will support Fast-Lip, RecurJac, Diffai series (Diffai, DeepZ, RefineZono, ..
 In the future, we also plan to provide an uniform interface to run Reluplex easily.
 
 For recent hot randomized smoothing series approaches, we may provide a separate tool in the future.
+
+Before running the tool, please create an empty folder named `tmp/` under the root path.

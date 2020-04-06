@@ -173,7 +173,7 @@ def Train(model, t, loader, eps_scheduler, max_eps, norm, logger, verbose, train
 
         if verbose or method != "natural":
             if kwargs["bound_type"] == "convex-adv":
-                # Wong and Kolter's bound, or equivalently Fast-Lin
+                # Wong and Kolter's bound, or equivalently fastlin
                 if kwargs["convex-proj"] is not None:
                     proj = kwargs["convex-proj"]
                     if norm == np.inf:

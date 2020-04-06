@@ -1,6 +1,6 @@
 ## bound_fastlin_fastlip.py
 ## 
-## Implementation of Fast-Lin and Fast-Lip bounds
+## Implementation of fastlin and Fast-Lip bounds
 ##
 ## Copyright (C) 2018, Huan Zhang <huan@huan-zhang.com> and contributors
 ## 

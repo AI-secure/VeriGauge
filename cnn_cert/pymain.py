@@ -30,12 +30,12 @@ def printlog(s):
 def command(cmd):
     return subprocess.run(cmd, stdout=subprocess.PIPE, shell=True).stdout.decode('utf-8')
 
-#Runs Fast-Lin with specified parameters
+#Runs fastlin with specified parameters
 def run(hidden, numlayer, numimage, norm, filename = '', layers = None, lp=False, lpfull= False, dual=False, sparse = False, spectral = False, cifar = False, cnnmodel = False, tinyimagenet=False):
     if sparse:
-        cmd = 'python3 Fast-Lin/main_sparse.py '
+        cmd = 'python3 fastlin/main_sparse.py '
     else:
-        cmd = 'python3 Fast-Lin/main.py '
+        cmd = 'python3 fastlin/main.py '
     if cifar:
         cmd += '--model cifar '
     if tinyimagenet:
@@ -83,7 +83,7 @@ def run_cnn(file_name, n_samples, norm, core=True, activation='relu', cifar=Fals
         if norm == '1':
             return run_cnn_full(file_name, n_samples, 1, 105, activation, cifar, tinyimagenet)
 
-#Runs all Fast-Lin and CNN-Cert variations
+#Runs all fastlin and CNN-Cert variations
 def run_all_relu(layers, file_name, mlp_file_name, cifar = False, num_image=10, flfull = False, nonada = False):
     if len(file_name.split('_')) == 5:
         filters = file_name.split('_')[-2]
@@ -119,7 +119,7 @@ def run_all_relu(layers, file_name, mlp_file_name, cifar = False, num_image=10, 
         LBss.append(LB)
         timess.append(time)
         LB, time = run(999, len(layers)+1, num_image, norm, mlp_file_name, layers, sparse=True, cifar=cifar)
-        printlog("Fast-Lin, Sparse")
+        printlog("fastlin, Sparse")
         if filters:
             printlog("model name = {0}, numlayer = {1}, numimage = {2}, norm = {3}, targettype = random, filters = {4}, kernel size = {5}".format(file_name,len(layers)+1,num_image,norm,filters,kernel_size))
         else:
@@ -129,9 +129,9 @@ def run_all_relu(layers, file_name, mlp_file_name, cifar = False, num_image=10, 
         printlog("-----------------------------------")
         LBss.append(LB)
         timess.append(time)
-        if flfull: #Run full matrix version of Fast-Lin
+        if flfull: #Run full matrix version of fastlin
             LB, time = run(999, len(layers)+1, num_image, norm, mlp_file_name, layers, cifar=cifar)
-            printlog("Fast-Lin")
+            printlog("fastlin")
             if filters:
                 printlog("model name = {0}, numlayer = {1}, numimage = {2}, norm = {3}, targettype = random, filters = {4}, kernel size = {5}".format(file_name,len(layers)+1,num_image,norm,filters,kernel_size))
             else:
@@ -231,7 +231,7 @@ def run_all_general(file_name, num_image = 10, core=True, cifar=False, ada=True,
         times.append(timess)
     return LBs, times
 
-#Runs Dual LP version of Fast-Lin
+#Runs Dual LP version of fastlin
 def run_LP(layers, mlp_file_name, num_image=10, core=True, cifar=False):
     LBs = []
     times = []
@@ -346,7 +346,7 @@ if __name__ == '__main__':
     print("==================================================")
     print("================ Running Table {} ================".format(table))
     print("==================================================")
-    print('CNN-Cert, Fast-Lin and LP')
+    print('CNN-Cert, fastlin and LP')
     printlog("Table {} result".format(table))
     printlog("-----------------------------------")
     if table == 1:

@@ -23,7 +23,7 @@ numactl -N 0 python3 main.py --numimage 1 --eps 0.5 --norm 1 --modelfile models/
 # Test for CROWN-adaptive with the second layer using quadratic bound
 numactl -N 0 python3 main.py --numimage 1 --eps 0.5 --norm i --modelfile models/mnist_3layer_relu_20_best --jacbndalg disable --layerbndalg crown-general --quad --targettype least --task robustness
 
-# Test for Fast-Lin
+# Test for fastlin
 numactl -N 0 python3 main.py --numimage 1 --eps 0.05 --norm i --modelfile models/mnist_3layer_relu_1024_best --jacbndalg disable --layerbndalg fastlin --targettype least --task robustness
 
 # Test for Fast-Lip

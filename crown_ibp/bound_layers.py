@@ -164,7 +164,7 @@ class BoundConv2d(Conv2d):
             sum_bias = (last_A.sum((3,4)) * self.bias).sum(2)
             logger.debug('sum_bias %s', sum_bias.size()) 
             return next_A, sum_bias
-        # if the slope is the same (Fast-Lin) and both matrices are given, only need to compute one of them
+        # if the slope is the same (fastlin) and both matrices are given, only need to compute one of them
         if self.bound_opts.get("same-slope", False) and (last_uA is not None) and (last_lA is not None):
             uA, ubias = _bound_oneside(last_uA, True)
             _, lbias = _bound_oneside(last_lA, False)

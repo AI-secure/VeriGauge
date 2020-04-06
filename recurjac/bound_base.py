@@ -1,6 +1,6 @@
 ## bound_base.py
 ## 
-## Common interface to all different bound computation methods (RecurJac, CROWN, Fast-Lin and Fast-Lip)
+## Common interface to all different bound computation methods (RecurJac, CROWN, fastlin and Fast-Lip)
 ##
 ## Copyright (C) 2018, Huan Zhang <huan@huan-zhang.com> and contributors
 ## 

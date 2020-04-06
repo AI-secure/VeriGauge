@@ -219,7 +219,7 @@ class IBPAdaptor(RealAdaptorBase):
 
 class FastLinIBPAdaptor(RealAdaptorBase):
     """
-        Fast-Lin with Interval Bound Improvement
+        fastlin with Interval Bound Improvement
     """
 
     def prepare_solver(self, in_shape):

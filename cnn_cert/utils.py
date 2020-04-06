@@ -1,5 +1,5 @@
 #Common utility file
-#From Fast-Lin repository
+#From fastlin repository
 #https://github.com/huanzhang12/CertifiedReLURobustness
 
 import numpy as np

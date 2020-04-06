@@ -3,7 +3,7 @@
 """
 get_bound_ours.py
 
-core functions for Fast-Lin and Fast-Lip bounds
+core functions for fastlin and Fast-Lip bounds
 
 Copyright (C) 2018, Lily Weng  <twweng@mit.edu>
                     Huan Zhang <ecezhang@ucdavis.edu>

@@ -3,7 +3,7 @@
 """
 get_bound_ours.py
 
-core functions for Fast-Lin and Fast-Lip bounds
+core functions for fastlin and Fast-Lip bounds
 
 Copyright (C) 2018, Lily Weng  <twweng@mit.edu>
                     Huan Zhang <ecezhang@ucdavis.edu>
@@ -13,7 +13,7 @@ Copyright (C) 2018, Lily Weng  <twweng@mit.edu>
 
 from numba import jit
 import numpy as np
-from get_bounds_others import get_layer_bound_LP
+from .get_bounds_others import get_layer_bound_LP
 from tensorflow.contrib.keras.api.keras.models import load_model
 
 # use dictionary to save weights and bias
@@ -114,8 +114,9 @@ def init_layer_bound_relax_matrix_huan(Ws):
         diags[i] = np.empty(Ws[i].shape[1], dtype=np.float32)
     return diags
 
+# somehow jit throws an error...
 # matrix version of get_layer_bound_relax
-@jit(nopython=True)
+# @jit(nopython=True)
 def get_layer_bound_relax_matrix_huan_optimized(Ws,bs,UBs,LBs,neuron_state,nlayer,diags,x0,eps,p_n):
     assert nlayer >= 2
     assert nlayer == len(Ws) == len(bs) == len(UBs) == len(LBs) == (len(neuron_state) + 1) == len(diags)

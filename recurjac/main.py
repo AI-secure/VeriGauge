@@ -55,7 +55,7 @@ if __name__ == "__main__":
                 default = "crown-general",
                 type = str,
                 choices = ["crown-general", "crown-adaptive", "crown-interval", "fastlin", "interval", "fastlin-interval", "spectral"],
-                help='Algorithm to compute layer-wise upper and lower bounds. "crown-general": CROWN for general activation functions, "crown-adaptive": CROWN for ReLU with adaptive upper and lower bounds, "fastlin": Fast-Lin, "interval": Interval Bound Propagation, "spectral": spectral norm bounds (special, when use "spectral" bound we simply multiply each layer\'s operator norm).')
+                help='Algorithm to compute layer-wise upper and lower bounds. "crown-general": CROWN for general activation functions, "crown-adaptive": CROWN for ReLU with adaptive upper and lower bounds, "fastlin": fastlin, "interval": Interval Bound Propagation, "spectral": spectral norm bounds (special, when use "spectral" bound we simply multiply each layer\'s operator norm).')
     parser.add_argument('--bounded-input',
                 action='store_true',
                 help='Use bounded input from 0 to 1 (be careful with data range!)')

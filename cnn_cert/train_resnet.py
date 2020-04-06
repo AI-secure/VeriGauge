@@ -18,8 +18,8 @@ from tensorflow.contrib.keras.api.keras.optimizers import SGD, Adam
 from tensorflow.python.keras.engine.base_layer import Layer
 
 import tensorflow as tf
-from setup_mnist import MNIST
-from setup_cifar import CIFAR
+from .setup_mnist import MNIST
+from .setup_cifar import CIFAR
 import os
 
 

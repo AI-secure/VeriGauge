@@ -2,6 +2,7 @@
 import models.test_model
 import models.crown_ibp_model
 import models.recurjac_model
+import models.cnn_cert_model
 
 model_table = {
     "test": {
@@ -76,6 +77,19 @@ model_table = {
         'cifar10': {
             '10.2048.reg': lambda: models.recurjac_model.abstract_load_keras_model('recurjac', 'cifar', 10, 'relu', 2048),
         }
+    },
+    'cnn_cert': {
+        'mnist': {x: lambda: models.cnn_cert_model.load_cnn_cert_model('mnist_' + x) for x in
+                  ['2layer_fc_20', '3layer_fc_20', '4layer_fc_1024', 'cnn_7layer',
+                   'cnn_lenet', 'cnn_7layer_sigmoid', 'cnn_4layer_5_3_sigmoid',
+                   'cnn_4layer_5_3_tanh', 'cnn_7layer_tanh', 'cnn_8layer_5_3_sigmoid',
+                   'cnn_8layer_5_3_tanh', 'cnn_lenet_sigmoid', 'cnn_lenet_tanh',
+                  ]},
+        'cifar10': {x: lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_' + x) for x in
+                    ['4layer_fc_2048', '5layer_fc_1024', '5layer_fc_2048', 'cnn_7layer',
+                     '7layer_fc_1024', 'cnn_5layer_5_3_tanh', 'cnn_7layer_5_3_sigmoid',
+                     'cnn_7layer_sigmoid', 'cnn_7layer_5_3_tanh', 'cnn_7layer_tanh', 'cnn_5layer_5_3_sigmoid'
+                    ]}
     }
 }
 
