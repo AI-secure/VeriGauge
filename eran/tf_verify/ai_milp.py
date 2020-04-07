@@ -1,6 +1,6 @@
 from gurobipy import *
 import numpy as np
-from config import config
+from .config import config
 import multiprocessing
 
 import sys
@@ -604,21 +604,37 @@ def verify_network_with_milp(nn, LB_N0, UB_N0, nlb, nub, constraints):
 
     # model.setParam('TimeLimit', config.timeout_milp)
 
-    for or_list in constraints:
-        any = False
-        for (i, j) in or_list:
+    for and_list in constraints:
+        any = True
+        for (i, j) in and_list:
             obj = LinExpr()
-            obj += -1*var_list[counter + i]
-            obj += 1*var_list[counter + j]
+            obj += -1*var_list[counter + j]
+            obj += 1*var_list[counter + i]
             model.setObjective(obj,GRB.MINIMIZE)
             model.optimize()
 
             if model.objval <= 0:
-                any = True
+                any = False
                 break
 
         if not any:
             return False, model.x[0:input_size]
+
+    # for or_list in constraints:
+    #     any = False
+    #     for (i, j) in or_list:
+    #         obj = LinExpr()
+    #         obj += -1*var_list[counter + i]
+    #         obj += 1*var_list[counter + j]
+    #         model.setObjective(obj,GRB.MINIMIZE)
+    #         model.optimize()
+    #
+    #         if model.objval <= 0:
+    #             any = True
+    #             break
+    #
+    #     if not any:
+    #         return False, model.x[0:input_size]
 
     return True, model.x[0:input_size]
 

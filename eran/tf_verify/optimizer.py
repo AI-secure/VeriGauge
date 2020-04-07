@@ -1,8 +1,8 @@
 '''
 @author: Adrian Hoffmann
 '''
-from deepzono_nodes import *
-from deeppoly_nodes import *
+from .deepzono_nodes import *
+from .deeppoly_nodes import *
 from functools import reduce
 import numpy as np
 

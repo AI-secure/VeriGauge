@@ -1,7 +1,7 @@
 import numpy as np
 import onnx
 from onnx import numpy_helper
-from config import config
+from .config import config
 
 def onnxshape_to_intlist(onnxshape):
 	"""
@@ -75,7 +75,7 @@ def prepare_model(model):
 	input_node_map = {}
 
 	for initial in model.graph.initializer:
-		const = nchw_to_nhwc(numpy_helper.to_array(initial))
+		const = nchw_to_nhwc(numpy_helper.to_array(initial)).copy()
 		constants_map[initial.name] = const
 		shape_map[initial.name] = const.shape
 
@@ -86,7 +86,13 @@ def prepare_model(model):
 			shape_map[input.name] = onnxshape_to_intlist(input.type.tensor_type.shape)
 			input_node_map[input.name] = input
 
+	# [print(x, constants_map[x].flags.writeable) for x in constants_map]
+
 	for node in model.graph.node:
+
+		# print(node)
+		# [print(x, constants_map[x].flags.writeable) for x in constants_map]
+
 		#print(node)
 		output_node_map[node.output[0]] = node
 		for input in node.input:

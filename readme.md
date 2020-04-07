@@ -22,4 +22,8 @@ In the future, we also plan to provide an uniform interface to run Reluplex easi
 
 For recent hot randomized smoothing series approaches, we may provide a separate tool in the future.
 
-Before running the tool, please create an empty folder named `tmp/` under the root path.
+##### Things to do before running the tool
+
+- Before running the tool, please create an empty folder named `tmp/` under the root path.
+
+- Before running the tool, please substitute the constants.py definition by the paths in your environment.

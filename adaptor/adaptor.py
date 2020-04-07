@@ -22,7 +22,7 @@ class Adaptor():
         r = self.calc_radius(input, label, norm_type)
         return radius <= r
 
-    def calc_radius(self, input, label, norm_type, upper=0.5, eps=1e-4) -> float:
+    def calc_radius(self, input, label, norm_type, upper=0.5, eps=1e-2) -> float:
         """
             The default implementation assumes the completeness of verify() function
         :param input: input sample

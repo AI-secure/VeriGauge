@@ -5,7 +5,7 @@
 
 
 import numpy as np
-from config import config, Device
+from .config import config, Device
 
 if config.device == Device.CPU:
     from fppoly import *
@@ -15,8 +15,8 @@ else:
 from elina_interval import *
 from elina_abstract0 import *
 from elina_manager import *
-from krelu import encode_krelu_cons
-from ai_milp import *
+from .krelu import encode_krelu_cons
+from .ai_milp import *
 from functools import reduce
 
 
