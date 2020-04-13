@@ -3,10 +3,11 @@ import datetime
 import torch.nn as nn
 import tensorflow as tf
 import numpy as np
+import numpy.linalg as la
 import cvxpy as cp
 
 from adaptor.adaptor import Adaptor
-from cleverhans.attacks import ProjectedGradientDescent
+from cleverhans.attacks import ProjectedGradientDescent, CarliniWagnerL2
 from cleverhans.model import CallableModelWrapper
 from cleverhans.utils_pytorch import convert_pytorch_model_to_tf
 
@@ -16,6 +17,7 @@ from basic.models import model_transform
 from basic.intervalbound import IntervalFastLinBound, IntervalBound, FastIntervalBound
 from basic.milp import MILPVerifier
 from basic.percysdp import PercySDP
+from basic.components import BaselinePointVerifierExt
 
 
 class BasicAdaptor(Adaptor):
@@ -91,6 +93,55 @@ class PGDAdaptor(BasicAdaptor):
 
         adv_pred = np.argmax(adv_preds[0])
         return adv_pred == label
+
+
+class CWAdaptor(BasicAdaptor):
+    """
+        ** Not a real attack **
+        For PGD attack, which only provides the lower bound for the robust radius
+    """
+
+    def __init__(self, dataset, model):
+        super(CWAdaptor, self).__init__(dataset, model)
+
+        self.config = tf.ConfigProto()
+        self.config.gpu_options.allow_growth = True
+        self.sess = tf.Session(config=self.config)
+
+        self.tf_model = convert_pytorch_model_to_tf(self.model)
+        self.ch_model = CallableModelWrapper(self.tf_model, output_layer='logits')
+
+        self.dataset = dataset
+
+    def calc_radius(self, input, label, norm_type, upper=0.5, eps=1e-2):
+
+        # only support L2 norm
+        assert norm_type == '2'
+
+        xs = input.unsqueeze(0)
+        clean_preds = self.model(xs.cuda()).detach().cpu().numpy()
+        clean_pred = np.argmax(clean_preds[0])
+        if clean_pred != label:
+            return 0.
+
+        x_op = tf.placeholder(tf.float32, shape=(None, input.shape[0], input.shape[1], input.shape[2],))
+        attk = CarliniWagnerL2(self.ch_model, sess=self.sess)
+        params = {'y': tf.one_hot([label], get_num_classes(self.dataset)),
+                  'clip_min': 0.0,
+                  'clip_max': 1.0,
+                  'max_iterations': 1000}
+        adv_x = attk.generate(x_op, **params)
+        adv_preds_op = self.tf_model(adv_x)
+
+        (adv_preds, adv_xsamp) = self.sess.run((adv_preds_op, adv_x), feed_dict={x_op: xs})
+
+        adv_pred = np.argmax(adv_preds[0])
+        if adv_pred == label:
+            # fail to find out adv example, return the radius to be the maximum one
+            return la.norm(np.ones_like(adv_xsamp.reshape(-1)) * 0.5, 2)
+        else:
+            dist = la.norm(adv_xsamp.reshape(-1) - xs.numpy().reshape(-1), 2)
+            return dist
 
 
 class VerifierAdaptor(BasicAdaptor):
@@ -330,5 +381,62 @@ class PercySDPAdaptor(RealAdaptorBase):
             if i != label:
                 self.bound.run(bl, bu, label, i)
                 if self.bound.prob.status not in ['optimal'] or self.bound.prob.value > 0.:
+                    return False
+        return True
+
+
+class FazlybSDPAdaptor(RealAdaptorBase):
+    """
+        SDP from Fazlyb et al
+    """
+
+    def __init__(self, dataset, model, timeout=30):
+        super(FazlybSDPAdaptor, self).__init__(dataset, model)
+        cp.settings.SOLVE_TIME = timeout
+
+    def prepare_solver(self, in_shape):
+        self.prebound = IntervalFastLinBound(self.new_model, in_shape, self.in_min, self.in_max)
+
+    def verify(self, input, label, norm_type, radius):
+        """
+            Here we overwrite the base class verify() method
+        """
+        in_shape = list(input.shape)
+        # only support Linfty norm
+        assert norm_type == 'inf'
+        if self.new_model is None:
+            # init at the first time
+            before = time()
+            print(f"Init model for {self.__class__.__name__}...")
+            self.build_new_model(input)
+            self.prepare_solver(in_shape)
+            after = time()
+            print("Init done, time", str(datetime.timedelta(seconds=(after - before))), )
+
+        # firstly check the clean prediction
+        input = self.input_preprocess(input)
+        xs = input.unsqueeze(0)
+        clean_preds = self.model(xs.cuda()).detach().cpu().numpy()
+        clean_pred = np.argmax(clean_preds[0])
+        if clean_pred != label:
+            return False
+
+        m_radius = radius / self.coef
+
+        input = input.contiguous().view(-1)
+        self.prebound.calculate_bound(input, m_radius)
+        bl = [np.maximum(self.prebound.l[i], 0) if i > 0 else self.prebound.l[i] for i in range(len(self.prebound.l))]
+        bu = [np.maximum(self.prebound.u[i], 0) if i > 0 else self.prebound.u[i] for i in range(len(self.prebound.u))]
+
+        pv = BaselinePointVerifierExt(self.new_model, in_shape, self.in_min, self.in_max)
+
+
+        for i in range(get_num_classes(self.dataset)):
+            if i != label:
+
+                pv.create_cmat(input, label, i, m_radius, bl, bu)
+                pv.run()
+
+                if pv.prob.status not in ['unbounded', 'unbounded_inaccurate'] and pv.prob.value > 0.:
                     return False
         return True

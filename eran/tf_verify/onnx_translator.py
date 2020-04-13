@@ -75,8 +75,10 @@ def prepare_model(model):
 	input_node_map = {}
 
 	for initial in model.graph.initializer:
+		pass
 		const = nchw_to_nhwc(numpy_helper.to_array(initial)).copy()
 		constants_map[initial.name] = const
+		pass
 		shape_map[initial.name] = const.shape
 
 	placeholdernames = []

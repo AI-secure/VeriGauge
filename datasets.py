@@ -21,14 +21,14 @@ os.environ[IMAGENET_LOC_ENV] = "/srv/local/data/ImageNet/ILSVRC2012_full"
 from constants import DATASETS
 
 
-def get_dataset(dataset: str, split: str) -> Dataset:
+def get_dataset(dataset: str, split: str, normalize=None) -> Dataset:
     """Return the dataset as a PyTorch Dataset object"""
     if dataset == "imagenet":
-        return _imagenet(split)
+        return _imagenet(split, normalize)
     elif dataset == "cifar10":
-        return _cifar10(split)
+        return _cifar10(split, normalize)
     elif dataset == "mnist":
-        return _mnist(split)
+        return _mnist(split, normalize)
 
 
 def get_num_classes(dataset: str):
@@ -51,43 +51,57 @@ def get_input_shape(dataset: str):
         return (1, 28, 28)
 
 
-def _mnist(split: str) -> Dataset:
+def _mnist(split: str, normalize) -> Dataset:
+    if normalize is None:
+        transform = transforms.ToTensor()
+    else:
+        mean, std = normalize
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=mean, std=std)
+        ])
     if split == "train":
-        return datasets.MNIST("./dataset_cache", train=True, download=True, transform=transforms.ToTensor())
+        return datasets.MNIST("./dataset_cache", train=True, download=True, transform=transform)
     elif split == "test":
-        return datasets.MNIST("./dataset_cache", train=False, download=True, transform=transforms.ToTensor())
+        return datasets.MNIST("./dataset_cache", train=False, download=True, transform=transform)
 
 
-def _cifar10(split: str) -> Dataset:
+def _cifar10(split: str, normalize) -> Dataset:
+    transform_list = list()
     if split == "train":
-        return datasets.CIFAR10("./dataset_cache", train=True, download=True, transform=transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor()
-        ]))
+        transform_list.extend([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip()])
+    transform_list.append(transforms.ToTensor())
+    if normalize is not None:
+        mean, std = normalize
+        transform_list.extend(transforms.Normalize(mean=mean, std=std))
+    transform = transforms.Compose(transform_list)
+
+    if split == "train":
+        return datasets.CIFAR10("./dataset_cache", train=True, download=True, transform=transform)
     elif split == "test":
-        return datasets.CIFAR10("./dataset_cache", train=False, download=True, transform=transforms.ToTensor())
+        return datasets.CIFAR10("./dataset_cache", train=False, download=True, transform=transform)
 
 
-def _imagenet(split: str) -> Dataset:
+def _imagenet(split: str, normalize) -> Dataset:
     if not IMAGENET_LOC_ENV in os.environ:
         raise RuntimeError("environment variable for ImageNet directory not set")
 
     dir = os.environ[IMAGENET_LOC_ENV]
+
+    transform_list = list()
+    if split == "train":
+        transform_list.extend([transforms.RandomSizedCrop(224), transforms.RandomHorizontalFlip()])
+    elif split == "test":
+        transform_list.extend([transforms.Scale(256), transforms.CenterCrop(224)])
+    transform_list.append(transforms.ToTensor())
+    if normalize is not None:
+        transform_list.extend(transforms.Normalize(mean=mean, std=std))
+    transform = transforms.Compose(transform_list)
+
     if split == "train":
         subdir = os.path.join(dir, "train")
-        transform = transforms.Compose([
-            transforms.RandomSizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor()
-        ])
     elif split == "test":
         subdir = os.path.join(dir, "val")
-        transform = transforms.Compose([
-            transforms.Scale(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor()
-        ])
     return datasets.ImageFolder(subdir, transform)
 
 

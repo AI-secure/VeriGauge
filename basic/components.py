@@ -5,8 +5,9 @@ import sys
 import cvxpy as cp
 import numpy as np
 
-from model import Flatten, FlattenConv2D
-from core import *
+from models.zoo import Flatten
+from basic.models import FlattenConv2D
+from .core import *
 
 class BaselinePointVerifier():
 

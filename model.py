@@ -3,6 +3,7 @@ import models.test_model
 import models.crown_ibp_model
 import models.recurjac_model
 import models.cnn_cert_model
+import models.exp_model
 
 
 model_table = {
@@ -107,6 +108,26 @@ model_table = {
             'cnn_7layer_5_3_tanh': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_cnn_7layer_5_3_tanh'),
             'cnn_7layer_tanh': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_cnn_7layer_tanh'),
             'cnn_5layer_5_3_sigmoid': lambda: models.cnn_cert_model.load_cnn_cert_model('cifar_cnn_5layer_5_3_sigmoid'),
+        }
+    },
+    'exp': {
+        'mnist': {
+            'A': lambda: models.exp_model.two_layer_fc20('mnist'),
+            'B': lambda: models.exp_model.three_layer_fc100('mnist'),
+            'C': lambda: models.exp_model.mnist_conv_small(),
+            'D': lambda: models.exp_model.mnist_conv_medium(),
+            'E': lambda: models.exp_model.mnist_conv_large(),
+            'F': lambda: models.exp_model.conv_super('mnist'),
+            'G': lambda: models.exp_model.seven_layer_fc1024('mnist')
+        },
+        'cifar10': {
+            'A': lambda: models.exp_model.two_layer_fc20('cifar10'),
+            'B': lambda: models.exp_model.three_layer_fc100('cifar10'),
+            'C': lambda: models.exp_model.cifar_conv_small(),
+            'D': lambda: models.exp_model.cifar_conv_medium(),
+            'E': lambda: models.exp_model.cifar_conv_large(),
+            'F': lambda: models.exp_model.conv_super('cifar10'),
+            'G': lambda: models.exp_model.seven_layer_fc1024('cifar10')
         }
     }
 }
