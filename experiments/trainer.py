@@ -1,5 +1,6 @@
+GPU_ID = 1
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = str(GPU_ID)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import sys
 from os.path import dirname
@@ -10,6 +11,9 @@ from sys import stderr
 from pprint import pprint
 import time
 import datetime
+
+import numpy as np
+import numpy.linalg as la
 
 import torch
 import torch.nn as nn
@@ -129,8 +133,21 @@ def main(train_method, dataset, model_name, params):
 
     # open file handler
     save_name = f'{ds}_{model_name}_{now_method}_{eps}'
-    train_log = open(f'{SAVE_PATH}/{save_name}_train.log', 'a')
-    test_log = open(f'{SAVE_PATH}/{save_name}_test.log', 'a')
+    mode = 'a'
+    if os.path.exists(f'{SAVE_PATH}/{save_name}_train.log') or os.path.exists(f'{SAVE_PATH}/{save_name}_test.log'):
+        choice = getpass.getpass(
+            f'Log exists. Do you want to rewrite it? (Y/others) ')
+        if choice == 'Y':
+            mode = 'w'
+            print('Rewrite log', file=stderr)
+        else:
+            mode = 'a'
+    train_log = open(f'{SAVE_PATH}/{save_name}_train.log', mode)
+    test_log = open(f'{SAVE_PATH}/{save_name}_test.log', mode)
+
+    # special treatment for model G - layerwise training
+    if model_name == 'G':
+        new_last_layer = nn.Linear(1024, 10)
 
     # start
     for epoch in range(epochs):
@@ -139,6 +156,25 @@ def main(train_method, dataset, model_name, params):
             # learning rate reduced to LR_REDUCE_RATE every LR_REDUCE epochs
             cur_lr *= LR_REDUCE_RATE
             print(f'  reduce learning rate to {cur_lr}', file=stderr)
+
+        # special treatment for model G - layerwise training
+        if model_name == 'G':
+            new_m = list()
+            tmp_cnt = 0
+            for l in m:
+                new_m.append(l)
+                if isinstance(l, nn.Linear) and l.out_features == 1024:
+                    tmp_cnt += 1
+                if tmp_cnt > epoch / 5:
+                    if l.out_features == 1024:
+                        new_m.append(nn.ReLU())
+                        new_m.append(new_last_layer)
+                    break
+            new_m = nn.Sequential(*new_m).cuda()
+            m, new_m = new_m, m
+            print(m, file=stderr)
+            cur_lr = lr
+            print(f'  learning rate restored to {cur_lr}', file=stderr)
 
         # init optimizer
         if optimizer_name == 'adam':
@@ -199,6 +235,7 @@ def main(train_method, dataset, model_name, params):
                     X_pgd.data = X + eta
                     X_pgd.data = torch.clamp(X_pgd.data, clip_min, clip_max)
 
+                # print(X_pgd.data, la.norm((X_pgd.data - X).numpy().reshape(-1), np.inf), file=stderr)
                 adv_out = m(Variable(X_pgd.data).cuda())
                 adv_ce = nn.CrossEntropyLoss()(adv_out, Variable(y_clean))
                 batch_robacc_tot = (adv_out.data.max(1)[1] == y_clean).float().sum()
@@ -257,7 +294,7 @@ def main(train_method, dataset, model_name, params):
             tf_model = convert_pytorch_model_to_tf(m)
             ch_model = CallableModelWrapper(tf_model, output_layer='logits')
             x_op = tf.placeholder(tf.float32, shape=(None,) + tuple(input_shape))
-            sess = tf.Session(config=tf.ConfigProto())
+            sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.5)))
             attk = ProjectedGradientDescent(ch_model, sess=sess)
             adv_x = attk.generate(x_op, **adv_params)
             adv_preds_op = tf_model(adv_x)
@@ -278,7 +315,8 @@ def main(train_method, dataset, model_name, params):
 
             if train_method == 'adv':
 
-                (adv_preds,) = sess.run((adv_preds_op,), feed_dict={x_op: X})
+                (adv_preds,) = sess.run((adv_preds_op,),
+                                        feed_dict={x_op: X})
                 adv_preds = torch.Tensor(adv_preds)
 
                 adv_ce = nn.CrossEntropyLoss()(adv_preds, Variable(y))
@@ -313,6 +351,10 @@ def main(train_method, dataset, model_name, params):
 
         torch.set_grad_enabled(True)
 
+        if model_name == 'G':
+            # switch back
+            m, new_m = new_m, m
+
         def save_with_configs(m, path):
             torch.save({
                 'state_dict': m.state_dict(),
@@ -333,6 +375,11 @@ def main(train_method, dataset, model_name, params):
             best_robacc = cur_robacc
 
         test_log.flush()
+
+        # memory clean after each batch
+        torch.cuda.empty_cache()
+        if train_method == 'adv':
+            sess.close()
 
 if __name__ == '__main__':
 
@@ -367,11 +414,19 @@ if __name__ == '__main__':
                 save_name = f'{ds}_{model_name}_{now_method}_{now_eps}'
                 cond = True
                 if os.path.exists(f'{SAVE_PATH}/{save_name}_best.pth'):
-                    choice = getpass.getpass(f'The file {save_name}_best.pth already exists. Do you want to retrain it? (Y/others) ')
+                    try:
+                        d = torch.load(f'{SAVE_PATH}/{save_name}_best.pth')
+                        acc = d['acc']
+                        robacc = d['robacc']
+                    except:
+                        acc, robacc = 0.0, 0.0
+                    choice = getpass.getpass(f'The weight {save_name} (acc={acc:.3f}, robacc={robacc:.3f}) already exists. Do you want to retrain it? (Y/others) ')
                     if choice == 'Y':
                         cond = True
+                        print('Retrain selected', file=stderr)
                     else:
                         cond = False
+                        print('Skip selected', file=stderr)
                 if not cond:
                     continue
 

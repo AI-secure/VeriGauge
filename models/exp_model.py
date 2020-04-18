@@ -33,6 +33,21 @@ def try_load_weight(m, name):
         print('no load', file=sys.stderr)
         return m, False
 
+# def eliminate_batchnorm(m):
+#     """
+#         Eliminate the batch norm 1d which is not supported by some
+#     :param m:
+#     :return:
+#     """
+#     pre_layer = None
+#     new_m = list()
+#     for l in m:
+#         if isinstance(l, nn.BatchNorm1d):
+#             assert isinstance(l, )
+#             print(l.weight)
+#             print(l.bias)
+#             l.
+
 # ========= model FC small (A) ==========
 def two_layer_fc20(ds):
     assert ds in ['mnist', 'cifar10'], 'unknown dataset name'
@@ -223,14 +238,19 @@ def seven_layer_fc1024(ds):
         nn.Linear(in_cells(ds), 1024),
         nn.ReLU(),
         nn.Linear(1024, 1024),
+        # nn.BatchNorm1d(1024),
         nn.ReLU(),
         nn.Linear(1024, 1024),
+        # nn.BatchNorm1d(1024),
         nn.ReLU(),
         nn.Linear(1024, 1024),
+        # nn.BatchNorm1d(1024),
         nn.ReLU(),
         nn.Linear(1024, 1024),
+        # nn.BatchNorm1d(1024),
         nn.ReLU(),
         nn.Linear(1024, 1024),
+        # nn.BatchNorm1d(1024),
         nn.ReLU(),
         nn.Linear(1024, 1024),
         nn.ReLU(),

@@ -46,9 +46,9 @@ clean_params = {
 adv_params = {
     'normalized': False,
     # retrain from clean trained model
-    'retrain': True,
+    'retrain': False,
     'optimizer': 'sgd',
-    'learning_rate': 0.01,
+    'learning_rate': 0.1,
     'weight_decay': 5e-4,
     'epochs': 40,
     # 'eps': radius,
