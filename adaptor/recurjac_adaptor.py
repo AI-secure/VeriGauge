@@ -11,39 +11,71 @@ import datasets
 from datasets import NormalizeLayer
 from models.test_model import Flatten
 from adaptor.basic_adaptor import VerifierAdaptor
+import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import backend as K
 
+global graph
+graph = tf.get_default_graph()
+global sess
+sess = tf.Session(graph=graph, config=tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.5)))
+
 
 def torch2keras(dataset, model):
-    input_shape = datasets.get_input_shape(dataset)
-    ans = keras.Sequential()
-    n = 0
-    activation, activation_param = list(), None
-    for layer in model:
-        n += 1
-        if isinstance(layer, Flatten):
-            ans.add(keras.layers.Flatten(input_shape=input_shape))
-        elif isinstance(layer, nn.Linear):
-            i, o = layer.in_features, layer.out_features
-            l = keras.layers.Dense(o)
-            ans.add(l)
-            l.set_weights([layer.weight.t().cpu().detach().numpy(), layer.bias.cpu().detach().numpy()])
-        elif isinstance(layer, nn.ReLU):
-            ans.add(keras.layers.Activation('relu', name=f'relu_{n}'))
-            activation.append('relu')
-        elif isinstance(layer, nn.Tanh):
-            ans.add(keras.layers.Activation('tanh', name=f'tanh_{n}'))
-            activation.append('tanh')
-        elif isinstance(layer, nn.LeakyReLU):
-            ans.add(keras.layers.LeakyReLU(alpha=layer.negative_slope, name=f'leaky_{n}'))
-            activation.append('leaky')
-            activation_param = layer.negative_slope
-        elif isinstance(layer, nn.Dropout):
-            # ignore dropout layer since we only use the model for evaluation here
-            pass
-        else:
-            raise NotImplementedError
+    with sess.as_default():
+        with graph.as_default():
+            input_shape = datasets.get_input_shape(dataset)
+            ans = keras.Sequential()
+            n = 0
+            activation, activation_param = list(), None
+            first_layer = True
+
+            for layer in model:
+
+                if first_layer:
+                    kwargs = {'input_shape': input_shape}
+                    first_layer = False
+                else:
+                    kwargs = {}
+
+                n += 1
+                if isinstance(layer, Flatten):
+                    ans.add(keras.layers.Flatten(**kwargs))
+                elif isinstance(layer, nn.Linear):
+                    i, o = layer.in_features, layer.out_features
+                    l = keras.layers.Dense(o)
+                    ans.add(l)
+                    l.set_weights([layer.weight.t().cpu().detach().numpy(), layer.bias.cpu().detach().numpy()])
+                elif isinstance(layer, nn.ReLU):
+                    ans.add(keras.layers.Activation('relu', name=f'relu_{n}'))
+                    activation.append('relu')
+                elif isinstance(layer, nn.Tanh):
+                    ans.add(keras.layers.Activation('tanh', name=f'tanh_{n}'))
+                    activation.append('tanh')
+                elif isinstance(layer, nn.LeakyReLU):
+                    ans.add(keras.layers.LeakyReLU(alpha=layer.negative_slope, name=f'leaky_{n}'))
+                    activation.append('leaky')
+                    activation_param = layer.negative_slope
+                elif isinstance(layer, nn.Dropout):
+                    # ignore dropout layer since we only use the model for evaluation here
+                    pass
+                elif isinstance(layer, nn.Conv2d):
+                    new_layer = keras.layers.Conv2D(layer.out_channels, layer.kernel_size, layer.stride,
+                                                    'valid' if layer.padding[0] == 0 else 'same',
+                                                    'channels_first',
+                                                    use_bias=layer.bias is not None,
+                                                    **kwargs)
+
+                    ans.add(new_layer)
+                    # print(ret.output_shape)
+                    new_weights = [layer.weight.cpu().detach().numpy().transpose(2, 3, 1, 0)]
+                    if layer.bias is not None:
+                        new_weights.append(layer.bias.cpu().detach().numpy())
+                    new_layer.set_weights(new_weights)
+                else:
+
+                    raise NotImplementedError
+
     # only one type of activation is permitted
     activation = list(set(activation))
     assert len(activation) == 1
@@ -59,29 +91,31 @@ class RecurBaseModel(NLayerModel):
     def __init__(self, dataset, model):
         self.model, self.activation, self.activation_param = torch2keras(dataset, model)
 
-        # extract weights
-        self.U = list()
-        for layer in self.model.layers:
-            if isinstance(layer, keras.layers.Dense):
-                self.U.append(layer)
+        with sess.as_default():
+            with graph.as_default():
+                # extract weights
+                self.U = list()
+                for layer in self.model.layers:
+                    if isinstance(layer, keras.layers.Dense):
+                        self.U.append(layer)
 
-        self.W = self.U[-1]
-        self.U = self.U[:-1]
+                self.W = self.U[-1]
+                self.U = self.U[:-1]
 
-        layer_outputs = []
-        # save the output of intermediate layers
-        for layer in self.model.layers:
-            if isinstance(layer, keras.layers.Conv2D) or isinstance(layer, keras.layers.Dense):
-                layer_outputs.append(K.function([self.model.layers[0].input], [layer.output]))
+                layer_outputs = []
+                # save the output of intermediate layers
+                for layer in self.model.layers:
+                    if isinstance(layer, keras.layers.Conv2D) or isinstance(layer, keras.layers.Dense):
+                        layer_outputs.append(K.function([self.model.layers[0].input], [layer.output]))
 
-        # a tensor to get gradients
-        self.gradients = []
-        for i in range(self.model.output.shape[1]):
-            output_tensor = self.model.output[:, i]
-            self.gradients.append(K.gradients(output_tensor, self.model.input)[0])
+                # a tensor to get gradients
+                self.gradients = []
+                for i in range(self.model.output.shape[1]):
+                    output_tensor = self.model.output[:, i]
+                    self.gradients.append(K.gradients(output_tensor, self.model.input)[0])
 
-        self.layer_outputs = layer_outputs
-        self.model.summary()
+                self.layer_outputs = layer_outputs
+                self.model.summary()
 
 
 class RecurJacBase(VerifierAdaptor):
@@ -91,9 +125,11 @@ class RecurJacBase(VerifierAdaptor):
 
         self.model = RecurBaseModel(dataset, self.model)
 
-        # the weights and bias are saved in lists: weights and bias
-        # weights[i-1] gives the ith layer of weight and so on
-        self.weights, self.biases = get_weights_list(self.model)
+        with sess.as_default():
+            with graph.as_default():
+                # the weights and bias are saved in lists: weights and bias
+                # weights[i-1] gives the ith layer of weight and so on
+                self.weights, self.biases = get_weights_list(self.model)
 
         # hyperparameters
         self.lipsteps = 15
@@ -108,7 +144,8 @@ class RecurJacBase(VerifierAdaptor):
     def verify(self, input, label, norm_type, radius) -> bool:
         norm = {'1': 1, '2': 2, 'inf': np.inf}[norm_type]
         input = self.input_preprocess(input)
-        preds = self.model.model.predict(input.unsqueeze(0).numpy())
+        with graph.as_default():
+            preds = self.model.model.predict(input.unsqueeze(0).numpy())
         pred = preds[0]
         pred_label = np.argmax(pred, axis=0)
         if pred_label != label:
@@ -137,7 +174,8 @@ class RecurJacBase(VerifierAdaptor):
     def calc_radius(self, input, label, norm_type, upper=0.5, eps=1e-4) -> float:
         norm = {'1': 1, '2': 2, 'inf': np.inf}[norm_type]
         input = self.input_preprocess(input)
-        preds = self.model.model.predict(input.unsqueeze(0).numpy())
+        with graph.as_default():
+            preds = self.model.model.predict(input.unsqueeze(0).numpy())
         pred = preds[0]
         pred_label = np.argmax(pred, axis=0)
         if pred_label != label:
@@ -200,7 +238,9 @@ class SpectralAdaptor(RecurJacBase):
 
     def calc_radius(self, input, label, norm_type, upper=0.5, eps=1e-4) -> float:
         norm = {'1': 1, '2': 2, 'inf': np.inf}[norm_type]
-        preds = self.model.model.predict(input.unsqueeze(0).numpy())
+        with sess.as_default():
+            with graph.as_default():
+                preds = self.model.model.predict(input.unsqueeze(0).numpy())
         pred = preds[0]
         pred_label = np.argmax(pred, axis=0)
         if pred_label != label:

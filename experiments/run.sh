@@ -8,8 +8,20 @@
 
 # 3rd row method; mnist; full models; verify+radius
 # run on window run1, cuda 2
+#~/anaconda3/bin/python experiments/evaluate.py \
+#    --method IBPVer2 --method IBP --method Spectral --method RecurJac --method FastLip --method FastLinSparse --method FastLin \
+#    --dataset mnist \
+#    --model A --model B --model C --model D --model E --model F --model G \
+#    --mode verify --mode radius \
+#    --cuda_ids 2 1>/dev/null
 ~/anaconda3/bin/python experiments/evaluate.py \
-    --method IBPVer2 --method IBP --method Spectral --method RecurJac --method FastLip --method FastLinSparse --method FastLin \
+    --method Spectral \
+    --dataset mnist \
+    --model C --model D --model E --model F --model G \
+    --mode verify --mode radius \
+    --cuda_ids 2
+~/anaconda3/bin/python experiments/evaluate.py \
+    --method RecurJac --method FastLip --method FastLinSparse --method FastLin \
     --dataset mnist \
     --model A --model B --model C --model D --model E --model F --model G \
     --mode verify --mode radius \
