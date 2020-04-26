@@ -19,7 +19,7 @@
     --dataset mnist \
     --model C --model D --model E --model F --model G \
     --mode verify --mode radius \
-    --cuda_ids 2
+    --cuda_ids 2 1>/dev/null
 ~/anaconda3/bin/python experiments/evaluate.py \
     --method RecurJac --method FastLip --method FastLinSparse --method FastLin \
     --dataset mnist \

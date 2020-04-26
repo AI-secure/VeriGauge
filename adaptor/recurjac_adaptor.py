@@ -144,8 +144,9 @@ class RecurJacBase(VerifierAdaptor):
     def verify(self, input, label, norm_type, radius) -> bool:
         norm = {'1': 1, '2': 2, 'inf': np.inf}[norm_type]
         input = self.input_preprocess(input)
-        with graph.as_default():
-            preds = self.model.model.predict(input.unsqueeze(0).numpy())
+        with sess.as_default():
+            with graph.as_default():
+                preds = self.model.model.predict(input.unsqueeze(0).numpy())
         pred = preds[0]
         pred_label = np.argmax(pred, axis=0)
         if pred_label != label:
