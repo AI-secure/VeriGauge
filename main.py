@@ -38,7 +38,7 @@ if __name__ == '__main__':
     from adaptor.recurjac_adaptor import FastLipAdaptor, RecurJacAdaptor, SpectralAdaptor
     from adaptor.recurjac_adaptor import FastLinAdaptor
     from adaptor.cnncert_adaptor import CNNCertAdaptor, FastLinSparseAdaptor, LPAllAdaptor
-    from adaptor.eran_adaptor import AI2Adaptor, DeepPolyAdaptor, RefineZonoAdaptor, KReluAdaptorAdaptor
+    from adaptor.eran_adaptor import AI2Adaptor, DeepPolyAdaptor, RefineZonoAdaptor, KReluAdaptor
 
     cln = CleanAdaptor(dataset, m)
     pgd = PGDAdaptor(dataset, m)

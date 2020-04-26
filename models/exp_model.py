@@ -5,9 +5,16 @@ import torch
 import math
 
 from models.zoo import Flatten
-from models.test_model import get_normalize_layer
-from datasets import get_input_shape
 
+
+def get_input_shape(dataset: str):
+    """Return a list of integer indicating the input shape as (num_channel, height, weight)"""
+    if dataset == "imagenet":
+        return (3, 224, 224)
+    elif dataset == 'cifar10':
+        return (3, 32, 32)
+    elif dataset == 'mnist':
+        return (1, 28, 28)
 
 def in_cells(dataset):
     ans = 1
@@ -22,8 +29,9 @@ SAVE_PATH = 'models_weights/exp_models'
 def try_load_weight(m, name):
     try:
         d = torch.load(f'{SAVE_PATH}/{name}.pth')
-        print('acc:', d['acc'], 'robacc:', d['robacc'], 'epoch:', d['epoch'], 'normalized:', d['normalized'], 'dataset:', d['dataset'])
+        print('acc:', d['acc'], 'robacc:', d['robacc'], 'epoch:', d['epoch'], 'normalized:', d['normalized'], 'dataset:', d['dataset'], file=sys.stderr)
         m.load_state_dict(d['state_dict'])
+        from models.test_model import get_normalize_layer
         if d['normalized']:
             # note: the original save model does not contain normalized layer
             m = nn.Sequential(get_normalize_layer(d['dataset']), m)
@@ -114,39 +122,45 @@ def cifar_conv_small():
 
 def mnist_conv_medium():
     model = nn.Sequential(
-        nn.Conv2d(1, 32, 3, stride=1, padding=1),
+        nn.Conv2d(1, 16, 3, stride=1, padding=1),
+        nn.ReLU(),
+        nn.Conv2d(16, 16, 4, stride=2, padding=1),
+        nn.ReLU(),
+        nn.Conv2d(16, 32, 3, stride=1, padding=1),
         nn.ReLU(),
         nn.Conv2d(32, 32, 4, stride=2, padding=1),
         nn.ReLU(),
-        nn.Conv2d(32, 64, 3, stride=1, padding=1),
-        nn.ReLU(),
-        nn.Conv2d(64, 64, 4, stride=2, padding=1),
-        nn.ReLU(),
         Flatten(),
-        nn.Linear(64*7*7,512),
+        nn.Linear(32*7*7,512),
         nn.ReLU(),
-        nn.Linear(512,512),
-        nn.ReLU(),
+        # nn.Linear(512,512),
+        # nn.ReLU(),
         nn.Linear(512,10)
     )
     return model
+    # for m in model.modules():
+    #     if isinstance(m, nn.Conv2d):
+    #         n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+    #         m.weight.data.normal_(0, math.sqrt(2. / n))
+    #         m.bias.data.zero_()
+    # return model
 
 
 def cifar_conv_medium():
     model = nn.Sequential(
-        nn.Conv2d(3, 32, 3, stride=1, padding=1),
+        nn.Conv2d(3, 16, 3, stride=1, padding=1),
+        nn.ReLU(),
+        nn.Conv2d(16, 16, 4, stride=2, padding=1),
+        nn.ReLU(),
+        nn.Conv2d(16, 32, 3, stride=1, padding=1),
         nn.ReLU(),
         nn.Conv2d(32, 32, 4, stride=2, padding=1),
         nn.ReLU(),
-        nn.Conv2d(32, 64, 3, stride=1, padding=1),
-        nn.ReLU(),
-        nn.Conv2d(64, 64, 4, stride=2, padding=1),
-        nn.ReLU(),
         Flatten(),
-        nn.Linear(64*8*8,512),
+        nn.Linear(32*8*8,512),
         nn.ReLU(),
-        nn.Linear(512,512),
-        nn.ReLU(),
+        # nn.Linear(512,512),
+        # nn.ReLU(),
         nn.Linear(512,10)
     )
     # return model

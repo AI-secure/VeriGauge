@@ -24,13 +24,14 @@ eps_list = {
 }
 
 # training mode
-method_order = ['clean', 'adv', 'certadv']
+method_order = ['certadv']
+# method_order = ['clean', 'adv', 'certadv']
 
 # batch
 batch_size_multipler = {
     'clean': 2,
     'adv': 1,
-    'certadv': 0.5
+    'certadv': 1
 }
 
 # parameters for clean training
@@ -61,12 +62,21 @@ adv_params = {
 
 # parameters for certadv
 certadv_params = {
-    'retrain': False,
+    'configpath': 'crown_ibp/config/',
     'normalized': True,
-    'optimizer': 'sgd',
-    'learning_rate': 0.1,
-    'weight_decay': 5e-4,
-    # 'optimizer': 'adam',
-    # 'learning_rate': 0.001,
-    'epochs': 40
+    # Zico's dual training somehow always returns NaN, so I discard it and train the models by crown-ibp.
+    # 'retrain': False,
+    # 'normalized': True,
+    # 'optimizer': 'sgd',
+    # 'learning_rate': 0.1,
+    # 'weight_decay': 5e-4,
+    # # 'optimizer': 'adam',
+    # # 'learning_rate': 0.001,
+    # 'norm_type': 'l1',
+    # 'epochs': 40
+    'eps_iter_coef': 1.0 / 50.0,
+    'clip_min': 0.0,
+    'clip_max': 1.0,
+    'nb_iter': 100,
+    'rand_init': True,
 }

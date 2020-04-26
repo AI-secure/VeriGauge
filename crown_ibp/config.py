@@ -51,7 +51,7 @@ def update_dict(d, u, show_warning = False):
 
 def load_config(args):
     print("loading config file: {}".format(args.config))
-    with open("defaults.json") as f:
+    with open("crown_ibp/defaults.json") as f:
         config = json.load(f)
     with open(args.config) as f:
         update_dict(config, json.load(f))

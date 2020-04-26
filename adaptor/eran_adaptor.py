@@ -176,10 +176,10 @@ class RefinePolyAdaptor(ERANBase):
         }
 
 
-class KReluAdaptorAdaptor(ERANBase):
+class KReluAdaptor(ERANBase):
 
     def __init__(self, dataset, model, domain='refinepoly', mode='dynamic'):
-        super(KReluAdaptorAdaptor, self).__init__(dataset, model)
+        super(KReluAdaptor, self).__init__(dataset, model)
 
         # === hyperparameter section ===
         assert domain in ['refinepoly', 'refinezono'], 'unsupported domain'

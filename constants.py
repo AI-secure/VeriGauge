@@ -9,5 +9,28 @@ NORM_TYPES = ['0', '1', '2', 'inf']
 
 DATASETS = ["imagenet", "cifar10", "mnist"]
 
-APPROACHES = ['PGD', 'IBP', 'FastLin', 'PercySDP', 'ZicoDual', 'CROWN', 'CROWN-IBP', 'LPAll' 'Diffai', 'RecurJac', 'FastLip']
+METHOD_LIST = ['Clean',
+               'PGD',
+               'CW',
+               'MILP',
+               'PercySDP',
+               'FazlybSDP',
+               'AI2',
+               'RefineZono',
+               'LPAll',
+               'kReLU',
+               'DeepPoly',
+               'ZicoDualLP',
+               'CROWN',
+               'CROWN_IBP',
+               'CNNCert',
+               'FastLin_IBP',
+               'FastLin',
+               'FastLinSparse',
+               'FastLip',
+               'RecurJac',
+               'Spectral',
+               'IBP',
+               'IBPVer2']
+
 

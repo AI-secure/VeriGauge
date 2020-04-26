@@ -73,7 +73,7 @@ def _cifar10(split: str, normalize) -> Dataset:
     transform_list.append(transforms.ToTensor())
     if normalize is not None:
         mean, std = normalize
-        transform_list.extend(transforms.Normalize(mean=mean, std=std))
+        transform_list.extend([transforms.Normalize(mean=mean, std=std)])
     transform = transforms.Compose(transform_list)
 
     if split == "train":

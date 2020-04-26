@@ -11,6 +11,7 @@ from sys import stderr
 from pprint import pprint
 import time
 import datetime
+import json
 
 import numpy as np
 import numpy.linalg as la
@@ -42,7 +43,7 @@ DEBUG = False
 LR_REDUCE = 10
 LR_REDUCE_RATE = 0.2
 
-EPS_WARMUP_EPOCHS = 20
+EPS_WARMUP_EPOCHS = 1
 # verbose step
 STEP = 10
 
@@ -59,9 +60,9 @@ def calc_tot_torun():
 def main(train_method, dataset, model_name, params):
     # prepare dataset and normalize settings
     normalize = None
-    if getattr(params, 'normalized', False):
+    if params.get('normalized', False):
         if dataset == 'mnist':
-            normalize = (_IMAGENET_MEAN, _IMAGENET_STDDEV)
+            normalize = (_MNIST_MEAN, _MNIST_STDDEV)
         elif dataset == 'cifar10':
             normalize = (_CIFAR10_MEAN, _CIFAR10_STDDEV)
         elif dataset == 'imagenet':
@@ -74,37 +75,60 @@ def main(train_method, dataset, model_name, params):
 
     # read params
     batch_size = params['batch_size']
-    optimizer_name = params['optimizer']
+    optimizer_name = params.get('optimizer', 'sgd')
     if optimizer_name == 'sgd':
-        lr = getattr(params, 'learning_rate', 0.1)
-        momentum = getattr(params, 'momentum', 0.1)
-        weight_decay = getattr(params, 'weight_decay', 5e-4)
+        lr = params.get('learning_rate', 0.1)
+        momentum = params.get('momentum', 0.1)
+        weight_decay = params.get('weight_decay', 5e-4)
     elif optimizer_name == 'adam':
-        lr = getattr(params, 'learning_rate', 0.1)
+        lr = params.get('learning_rate', 0.1)
     else:
         raise NotImplementedError
     cur_lr = lr
-    epochs = params['epochs']
-    eps = params['eps']
+    print('default learning rate =', cur_lr, file=stderr)
+    start_epoch = 0
+    epochs = params.get('epochs', 0)
+    eps = normed_eps = params['eps']
     if train_method == 'adv':
         # Note: for adversarial training, in training phase, we use the manual implementation version for precision,
-        # and use the clearhans implmenetation in test phase for precision
+        # and use the clearhans implementation in test phase for precision
         eps_iter_coef = params['eps_iter_coef']
         clip_min = params['clip_min']
         clip_max = params['clip_max']
         if normalize is not None:
             mean, std = normalize
-            clip_min = (clip_min - max(mean)) / min(std)
-            clip_max = (clip_max - min(mean)) / min(std)
+            clip_min = (clip_min - max(mean)) / min(std) - 1e-6
+            clip_max = (clip_max - min(mean)) / min(std) + 1e-6
+            normed_eps = eps / min(std)
         nb_iter = params['nb_iter']
         rand_init = params['rand_init']
 
-        adv_params = {'eps': eps,
+        adv_params = {'eps': normed_eps,
                       'clip_min': clip_min,
                       'clip_max': clip_max,
                       'eps_iter': eps_iter_coef * eps,
                       'nb_iter': nb_iter,
                       'rand_init': rand_init}
+    elif train_method == 'certadv':
+        # Note: for certified adversarially trained models, we test its accuracy still using PGD attack
+        eps_iter_coef = params['eps_iter_coef']
+        clip_min = params['clip_min']
+        clip_max = params['clip_max']
+        if normalize is not None:
+            mean, std = normalize
+            clip_min = (clip_min - max(mean)) / min(std) - 1e-6
+            clip_max = (clip_max - min(mean)) / min(std) + 1e-6
+            normed_eps = eps / min(std)
+        nb_iter = params['nb_iter']
+        rand_init = params['rand_init']
+
+        adv_params = {'eps': normed_eps,
+                      'clip_min': clip_min,
+                      'clip_max': clip_max,
+                      'eps_iter': eps_iter_coef * eps,
+                      'nb_iter': nb_iter,
+                      'rand_init': rand_init}
+        print(adv_params, file=stderr)
 
     # prepare loader
     train_loader = torch.utils.data.DataLoader(train_set, batch_size, shuffle=True, pin_memory=True)
@@ -121,15 +145,29 @@ def main(train_method, dataset, model_name, params):
     m = model.load_model('exp', dataset, model_name).cuda()
     print(m)
 
-    if train_method in ['adv', 'certadv'] and params['retrain']:
+    if train_method == 'adv' and params['retrain']:
         # retrain from the best clean model
-        clean_model_name = f'{ds}_{model_name}_clean_0_best'
+        clean_model_name = f'{dataset}_{model_name}_clean_0_best'
         new_m, stats = try_load_weight(m, clean_model_name)
         assert stats == True, "Could not load pretrained clean model."
         if isinstance(new_m[0], NormalizeLayer):
             # squeeze the normalize layer out
             new_m = new_m[1]
         m = new_m
+    elif train_method == 'certadv':
+        configdir = params['configpath']
+        ds_mapping = {'cifar10': 'cifar', 'mnist': 'mnist'}
+        ds_multiplier = {'cifar10': 255., 'mnist': 10.}
+        configfilename = f'exp_{ds_mapping[dataset]}{int(round(eps * ds_multiplier[dataset]))}.json'
+        with open(os.path.join(configdir, configfilename), 'r') as f:
+            real_config = json.load(f)
+        epochs = real_config['training_params']['epochs']
+        start_epoch = epochs - 1
+        model_path = os.path.join(os.path.join(real_config['path_prefix'], real_config['models_path']), f'{model_name}_best.pth')
+        d = torch.load(model_path)
+        print(f'certadv load from {model_path}', file=stderr)
+        m.load_state_dict(d['state_dict'])
+
 
     # open file handler
     save_name = f'{ds}_{model_name}_{now_method}_{eps}'
@@ -146,11 +184,11 @@ def main(train_method, dataset, model_name, params):
     test_log = open(f'{SAVE_PATH}/{save_name}_test.log', mode)
 
     # special treatment for model G - layerwise training
-    if model_name == 'G':
+    if model_name == 'G' and train_method == 'adv':
         new_last_layer = nn.Linear(1024, 10)
 
     # start
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
 
         if epoch % LR_REDUCE == 0 and epoch > 0:
             # learning rate reduced to LR_REDUCE_RATE every LR_REDUCE epochs
@@ -158,7 +196,7 @@ def main(train_method, dataset, model_name, params):
             print(f'  reduce learning rate to {cur_lr}', file=stderr)
 
         # special treatment for model G - layerwise training
-        if model_name == 'G':
+        if model_name == 'G' and train_method == 'adv':
             new_m = list()
             tmp_cnt = 0
             for l in m:
@@ -196,7 +234,7 @@ def main(train_method, dataset, model_name, params):
         adv_ce = 0.0
 
         # now eps
-        now_eps = eps * min((epoch + 1) / EPS_WARMUP_EPOCHS, 1.0)
+        now_eps = normed_eps * min((epoch + 1) / EPS_WARMUP_EPOCHS, 1.0)
         # =========== Training ===========
         print(f'Epoch {epoch}: training', file=stderr)
         if train_method != 'clean':
@@ -245,14 +283,9 @@ def main(train_method, dataset, model_name, params):
                 opt.step()
 
             elif train_method == 'certadv':
-                adv_ce, robust_err = robust_loss(m, now_eps,
-                                                 Variable(X_clean), Variable(y_clean),
-                                                 proj=50, norm_type='l1_median', bounded_input=False)
-
-                batch_robacc_tot = (1.0 - robust_err) * batch_tot
-                opt.zero_grad()
-                clean_ce.backward()
-                opt.step()
+                # no action to do for training
+                adv_ce = torch.Tensor([0.0]).cuda()
+                pass
 
             end_t = time.time()
 
@@ -272,6 +305,7 @@ def main(train_method, dataset, model_name, params):
                 print(f'  [train] {epoch}/{cur_idx} acc={cur_acc:.3f}({batch_acc_tot/batch_tot:.3f}) '
                       f'robacc={cur_robacc:.3f}({batch_robacc_tot/batch_tot:.3f}) ce={clean_ce:.3f} adv_ce={adv_ce:.3f} time={runtime:.3f}', file=stderr)
 
+
         train_log.flush()
 
         # =========== Testing ===========
@@ -290,7 +324,7 @@ def main(train_method, dataset, model_name, params):
         clean_ce = 0.0
         adv_ce = 0.0
 
-        if train_method == 'adv':
+        if train_method in ['adv', 'certadv']:
             tf_model = convert_pytorch_model_to_tf(m)
             ch_model = CallableModelWrapper(tf_model, output_layer='logits')
             x_op = tf.placeholder(tf.float32, shape=(None,) + tuple(input_shape))
@@ -313,7 +347,7 @@ def main(train_method, dataset, model_name, params):
             batch_tot = X.size(0)
             batch_acc_tot = (clean_out.data.max(1)[1] == y_clean).float().sum().item()
 
-            if train_method == 'adv':
+            if train_method in ['adv', 'certadv']:
 
                 (adv_preds,) = sess.run((adv_preds_op,),
                                         feed_dict={x_op: X})
@@ -322,13 +356,13 @@ def main(train_method, dataset, model_name, params):
                 adv_ce = nn.CrossEntropyLoss()(adv_preds, Variable(y))
                 batch_robacc_tot = (adv_preds.data.max(1)[1] == y).float().sum().item()
 
-            elif train_method == 'certadv':
-
-                adv_ce, robust_err = robust_loss(m, eps,
-                                                 Variable(X_clean), Variable(y_clean),
-                                                 proj=50, norm_type='l1_median', bounded_input=False)
-
-                batch_robacc_tot = (1.0 - robust_err) * batch_tot
+            # elif train_method == 'certadv':
+            #
+            #     adv_ce, robust_err = robust_loss(m, eps,
+            #                                      Variable(X_clean), Variable(y_clean),
+            #                                      proj=50, norm_type='l1_median', bounded_input=True)
+            #
+            #     batch_robacc_tot = (1.0 - robust_err) * batch_tot
 
             end_t = time.time()
 
@@ -351,7 +385,7 @@ def main(train_method, dataset, model_name, params):
 
         torch.set_grad_enabled(True)
 
-        if model_name == 'G':
+        if model_name == 'G' and train_method == 'adv':
             # switch back
             m, new_m = new_m, m
 
@@ -380,6 +414,9 @@ def main(train_method, dataset, model_name, params):
         torch.cuda.empty_cache()
         if train_method == 'adv':
             sess.close()
+
+    train_log.close()
+    test_log.close()
 
 if __name__ == '__main__':
 

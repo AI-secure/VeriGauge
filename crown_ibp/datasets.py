@@ -53,8 +53,13 @@ def mnist_loaders(dataset, batch_size, shuffle_train = True, shuffle_test = Fals
 
 def cifar_loaders(batch_size, shuffle_train = True, shuffle_test = False, train_random_transform = False, normalize_input = False, num_examples = None, test_batch_size=None): 
     if normalize_input:
-        std = [0.2023, 0.1994, 0.2010]
-        mean = [0.4914, 0.4822, 0.4465]
+        # lly slightly changed the std and mean
+        mean = [0.485, 0.456, 0.406]
+        std = [0.225, 0.225, 0.225]
+
+
+        # std = [0.2023, 0.1994, 0.2010]
+        # mean = [0.4914, 0.4822, 0.4465]
         normalize = transforms.Normalize(mean = mean, std = std)
     else:
         std = [1.0, 1.0, 1.0]

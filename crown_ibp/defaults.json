@@ -1,7 +1,7 @@
 {
     "model_def": "model_defs.py",
     "dataset": "mnist",
-    "path_prefix": "",
+    "path_prefix": "crown_ibp/exp_models",
     "alpha_path": "__unused__",
     "training_params": {
         "method": "natural",

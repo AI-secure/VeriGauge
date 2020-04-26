@@ -6,6 +6,8 @@
 ## contained in the LICENCE file in this directory.
 ##
 import sys
+sys.path.append('.')
+sys.path.append('..')
 import copy
 import torch
 from torch.nn import Sequential, Linear, ReLU, CrossEntropyLoss

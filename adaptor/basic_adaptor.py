@@ -43,6 +43,8 @@ class CleanAdaptor(BasicAdaptor):
     """
 
     def verify(self, input, label, norm_type, radius):
+        EPS = 1e-6
+        assert radius <= EPS
         xs = input.unsqueeze(0)
         clean_preds = self.model(xs.cuda()).detach().cpu().numpy()
         clean_pred = np.argmax(clean_preds[0])

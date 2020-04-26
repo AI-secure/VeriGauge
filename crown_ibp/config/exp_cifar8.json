@@ -1,0 +1,73 @@
+{
+    "model_def": "models.exp_model.py",
+    "dataset": "cifar",
+    "path_prefix": "",
+    "models_path": "./crown_ibp/exp_models/cifar_8/",
+    "training_params": {
+        "method": "robust",
+        "epochs": 200,
+        "lr": 0.001,
+        "weight_decay": 0.0,
+        "optimizer": "adam",
+        "starting_epsilon": 0.0,
+        "epsilon": 0.03137254901960784,
+        "schedule_start": 10,
+        "schedule_length":121,
+        "norm": "inf",
+        "verbose": false,
+        "loader_params": {"batch_size": 128, "test_batch_size": 256, "shuffle_train": true, "train_random_transform": true, "normalize_input": true},
+        "method_params": {"bounded_input": false, "bound_type": "crown-interval"}
+    },
+    "attack_params": {
+        "batch_size": 128,
+        "eps_start": 0.0,
+        "eps_end": 0.03137254901960784,
+        "eps_step": 9
+    },
+    "eval_params": {
+        "method": "robust",
+        "epsilon": 0.03137254901960784,
+        "norm": "inf",
+        "verbose": false,
+        "loader_params": {"batch_size": 128, "test_batch_size": 256, "shuffle_train": true, "normalize_input": true},
+        "method_params": {"bounded_input": false, "bound_type": "interval"}
+    },
+    "models": [
+        {
+            "model_id": "A",
+            "model_class": "two_layer_fc20",
+            "model_params": {"ds":  "cifar10"}
+        },
+        {
+            "model_id": "B",
+            "model_class": "three_layer_fc100",
+            "model_params": {"ds":  "cifar10"}
+        },
+        {
+            "model_id": "C",
+            "model_class": "cifar_conv_small",
+            "model_params": {}
+        },
+        {
+            "model_id": "D",
+            "model_class": "cifar_conv_medium",
+            "model_params": {}
+        },
+        {
+            "model_id": "E",
+            "model_class": "cifar_conv_large",
+            "model_params": {}
+        },
+        {
+            "model_id": "F",
+            "model_class": "conv_super",
+            "model_params": {"ds": "cifar10"}
+        },
+        {
+            "model_id": "G",
+            "model_class": "seven_layer_fc1024",
+            "model_params": {"ds": "cifar10"}
+        }
+    ]
+}
+

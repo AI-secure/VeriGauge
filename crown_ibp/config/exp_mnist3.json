@@ -1,0 +1,73 @@
+{
+    "model_def": "models.exp_model.py",
+    "dataset": "mnist",
+    "path_prefix": "",
+    "models_path": "./crown_ibp/exp_models/mnist_0.3/",
+    "training_params": {
+        "method": "robust",
+        "epochs": 100,
+        "lr": 5e-4,
+        "weight_decay": 0.0,
+        "optimizer": "adam",
+        "schedule_start": 1,
+        "starting_epsilon": 0.0,
+        "epsilon": 0.3,
+        "schedule_length":61,
+        "norm": "inf",
+        "verbose": false,
+        "loader_params": {"batch_size": 256, "test_batch_size": 256, "shuffle_train": true},
+        "method_params": {"bounded_input": true, "bound_type": "crown-interval"}
+    },
+    "attack_params": {
+        "batch_size": 128,
+        "eps_start": 0.0,
+        "eps_end": 0.3,
+        "eps_step": 16
+    },
+    "eval_params": {
+        "method": "robust",
+        "epsilon": 0.3,
+        "norm": "inf",
+        "verbose": false,
+        "loader_params": {"batch_size": 256, "test_batch_size": 256, "shuffle_train": true},
+        "method_params": {"bounded_input": true, "bound_type": "interval"}
+    },
+    "models": [
+        {
+            "model_id": "A",
+            "model_class": "two_layer_fc20",
+            "model_params": {"ds":  "mnist"}
+        },
+        {
+            "model_id": "B",
+            "model_class": "three_layer_fc100",
+            "model_params": {"ds":  "mnist"}
+        },
+        {
+            "model_id": "C",
+            "model_class": "mnist_conv_small",
+            "model_params": {}
+        },
+        {
+            "model_id": "D",
+            "model_class": "mnist_conv_medium",
+            "model_params": {}
+        },
+        {
+            "model_id": "E",
+            "model_class": "mnist_conv_large",
+            "model_params": {}
+        },
+        {
+            "model_id": "F",
+            "model_class": "conv_super",
+            "model_params": {"ds": "mnist"}
+        },
+        {
+            "model_id": "G",
+            "model_class": "seven_layer_fc1024",
+            "model_params": {"ds": "mnist"}
+        }
+    ]
+}
+
