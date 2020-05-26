@@ -10,12 +10,15 @@ import multiprocessing
 import time
 import getpass
 import ctypes
+import signal
 import inspect
 
 import datasets
 import model
 from models.exp_model import try_load_weight
 from constants import METHOD_LIST
+
+import torch
 
 weights = {
     'mnist': [
@@ -36,7 +39,7 @@ weights = {
 
 path_prefix = 'experiments/data'
 norm_type = 'inf'
-time_step = 0.5
+time_step = 0.05
 EPS = 1e-6
 
 def verify_wrapper(verifier, X, y, eps, stat_dict):
@@ -47,19 +50,45 @@ def verify_wrapper(verifier, X, y, eps, stat_dict):
     stat_dict['time'] = pttime - pstime
 
 
-def radius_wrapper(verifier, X, y, stat_dict):
-    if verifier.__class__.__name__ in ['FastLipAdaptor', 'RecurJacAdaptor', 'SpectralAdaptor', 'FastLinAdaptor']:
+def radius_wrapper(verifier, X, y, stat_dict, ds_name):
+    if ds_name == 'mnist':
+        precision = 1e-2
+    else:
+        precision = 1e-3
+    # if verifier.__class__.__name__ in ['FastLipAdaptor', 'RecurJacAdaptor', 'SpectralAdaptor', 'FastLinAdaptor']:
+    if verifier.__class__.__name__ in ['SpectralAdaptor']:
         pstime = time.time()
         ans = verifier.calc_radius(X, y, norm_type)
         pttime = time.time()
         stat_dict['result'] = ans
         stat_dict['time'] = pttime - pstime
+    elif verifier.__class__.__name__ in ['PGD', 'CW']:
+        # compute upper bound
+        # reimplement a binary search here
+        pstime = time.time()
+        l = 0.0
+        r = 0.35
+        stat_dict['result'] = r
+        # for CIFAR we need higher precision
+        while r - l > precision:
+            # print(l, r)
+            mid = (l + r) / 2.0
+            if verifier.verify(X, y, norm_type, mid):
+                l = mid
+                # changed!
+                stat_dict['result'] = l
+                stat_dict['time'] = time.time() - pstime
+            else:
+                r = mid
+                # changed!
+                # stat_dict['result'] = r
+                stat_dict['time'] = time.time() - pstime
     else:
         # reimplement a binary search here
         pstime = time.time()
         l = 0.0
         r = 0.5
-        while r-l > 1e-2:
+        while r-l > precision:
             # print(l, r)
             mid = (l + r) / 2.0
             if verifier.verify(X, y, norm_type, mid):
@@ -85,15 +114,20 @@ def _async_raise(tid, exctype):
         raise SystemError("PyThreadState_SetAsyncExc failed")
 
 def terminate(thread):
+    # os.killpg(thread.ident, signal.SIGTERM)
     _async_raise(thread.ident, SystemExit)
+    _async_raise(thread.ident, KeyboardInterrupt)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--method', type=str, action='append', choices=METHOD_LIST)
 parser.add_argument('--dataset', type=str, action='append', choices=['mnist', 'cifar10'])
 parser.add_argument('--model', type=str, action='append', choices=['A', 'B', 'C', 'D', 'E', 'F', 'G'])
 parser.add_argument('--mode', type=str, action='append', choices=['verify', 'radius'])
+parser.add_argument('--weight', type=str, action='append')
 parser.add_argument('--cuda_ids', type=str, default='0')
 parser.add_argument('--samples', default=100, type=int)
+parser.add_argument('--start', default=0, type=int)
+parser.add_argument('--end', default=9999999, type=int)
 parser.add_argument('--verify_timeout', default=60, type=int)
 parser.add_argument('--radius_timeout', default=120, type=int)
 parser.add_argument('--tleskip', default=10, type=int)
@@ -106,7 +140,7 @@ if __name__ == '__main__':
     # ====================== The supported adaptors ======================
 
     from adaptor.basic_adaptor import PGDAdaptor, CWAdaptor
-    from adaptor.basic_adaptor import CleanAdaptor, FastLinIBPAdaptor, IBPAdaptor, MILPAdaptor, PercySDPAdaptor, \
+    from adaptor.basic_adaptor import CleanAdaptor, FastLinIBPAdaptor, IBPAdaptor, MILPAdaptor, FastMILPAdaptor, PercySDPAdaptor, \
         FazlybSDPAdaptor
     from adaptor.lpdual_adaptor import ZicoDualAdaptor
     from adaptor.crown_adaptor import FullCrownAdaptor, CrownIBPAdaptor
@@ -115,12 +149,14 @@ if __name__ == '__main__':
     from adaptor.recurjac_adaptor import FastLinAdaptor
     from adaptor.cnncert_adaptor import CNNCertAdaptor, FastLinSparseAdaptor, LPAllAdaptor
     from adaptor.eran_adaptor import AI2Adaptor, DeepPolyAdaptor, RefineZonoAdaptor, KReluAdaptor
+    import tensorflow.keras.backend as K
 
     class_mapper = {
         'Clean': CleanAdaptor,
         'PGD': PGDAdaptor,
         'CW': CWAdaptor,
         'MILP': MILPAdaptor,
+        'FastMILP': FastMILPAdaptor,
         'PercySDP': PercySDPAdaptor,
         'FazlybSDP': FazlybSDPAdaptor,
         'AI2': AI2Adaptor,
@@ -158,10 +194,18 @@ if __name__ == '__main__':
             for now_model in args.model:
 
                 for now_weight_showname, now_weight_filename, now_eps in weights[now_ds_name]:
+                    if args.weight is not None and now_weight_showname not in args.weight:
+                        continue
+
+                    if now_method == 'Clean':
+                        now_eps = 0.0
 
                     skip_cnt = 0
 
                     for now_mode in args.mode:
+
+                        if now_mode == 'verify':
+                            skip_cnt = 0
 
                         print(f'Dataset={now_ds_name} Method={now_method} Model={now_model} Weight={now_weight_showname} Mode={now_mode}', file=stderr)
 
@@ -189,7 +233,8 @@ if __name__ == '__main__':
 
                         m = model.load_model('exp', now_ds_name, now_model)
                         m = m.cuda()
-                        try_load_weight(m, f'{now_ds_name}_{now_model}_{now_weight_filename}_best')
+                        m, ok = try_load_weight(m, f'{now_ds_name}_{now_model}_{now_weight_filename}_best')
+                        assert ok
 
                         clean_verifier = CleanAdaptor(now_ds_name, m)
                         verifier = class_mapper[now_method](now_ds_name, m)
@@ -200,6 +245,10 @@ if __name__ == '__main__':
                             handle = open(os.path.join(dir_path, filename), 'w')
 
                         for i in range(0, len(ds), step):
+                            if i < args.start:
+                                continue
+                            if i > args.end:
+                                break
                             X, y = ds[i]
 
                             correct = clean_verifier.verify(X, y, norm_type, 0.)
@@ -230,6 +279,10 @@ if __name__ == '__main__':
                                         if time.time() - stime > args.verify_timeout + time_step:
                                             if verify_proc.is_alive():
                                                 terminate(verify_proc)
+                                            # have to wait if it is refinezono
+                                            if now_method in ['RefineZono']:
+                                                while verify_proc.is_alive():
+                                                    time.sleep(time_step)
                                             tle = 1
                                             nowtime = time.time() - stime
                                             robust = 0
@@ -248,7 +301,7 @@ if __name__ == '__main__':
 
                                     elif now_mode == 'radius':
                                         stat_dict = {'time': args.radius_timeout + time_step, 'result': 0.}
-                                        radius_proc = threading.Thread(target=radius_wrapper, args=(verifier, X, y, stat_dict))
+                                        radius_proc = threading.Thread(target=radius_wrapper, args=(verifier, X, y, stat_dict, now_ds_name))
                                         stime = time.time()
                                         radius_proc.start()
                                         while time.time() - stime <= args.radius_timeout + time_step:
@@ -258,6 +311,10 @@ if __name__ == '__main__':
                                         if time.time() - stime > args.radius_timeout + time_step:
                                             if radius_proc.is_alive():
                                                 terminate(radius_proc)
+                                            # have to wait if it is refinezono
+                                            if now_method in ['RefineZono']:
+                                                while radius_proc.is_alive():
+                                                    time.sleep(time_step)
                                             tle = 1
                                             nowtime = time.time() - stime
                                             radius = stat_dict['result']
@@ -292,6 +349,7 @@ if __name__ == '__main__':
 
                         if cond == 1 or cond == 2:
                             handle.close()
+                            K.clear_session()
 
     print('Finish!', file=stderr)
 

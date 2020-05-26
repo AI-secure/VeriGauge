@@ -216,7 +216,7 @@ def encode_krelu_cons(nn, man, element, offset, layerno, length, lbi, ubi, relu_
 
     start = time.time()
     with multiprocessing.Pool(config.numproc) as pool:
-        krelu_results = pool.map(make_krelu_obj, krelu_args)
+        krelu_results = pool.map_async(make_krelu_obj, krelu_args).get(60)
     for krelu_inst in krelu_results:
         relucons.append(krelu_inst)
     end = time.time()

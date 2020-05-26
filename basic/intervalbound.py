@@ -233,8 +233,10 @@ class FastIntervalBound:
         with torch.no_grad():
             l = self.l[-1]
             u = self.u[-1]
-            l = torch.clamp(l, min=0.)
-            u = torch.clamp(u, min=0.)
+            l = np.clip(l, a_min=0., a_max=None)
+            # torch.clamp(l, min=0.)
+            u = np.clip(u, a_min=0., a_max=None)
+            # torch.clamp(u, min=0.)
             W = self.model[-1].weight
             b = self.model[-1].bias
             W_delta = W[y_true] - W[y_adv]
@@ -243,6 +245,7 @@ class FastIntervalBound:
             u = np.maximum(u, 0)
             W_delta = W_delta.cpu().numpy()
             b_delta = b_delta.cpu().numpy()
+            lb = np.dot(np.clip(W_delta, a_min=0., a_max=None), l) + np.dot(np.clip(W_delta, a_min=None, a_max=0.), u) + b_delta
             lb = np.dot(np.clip(W_delta, a_min=0., a_max=None), l) + np.dot(np.clip(W_delta, a_min=None, a_max=0.), u) + b_delta
             # print(l)
             # print(u)

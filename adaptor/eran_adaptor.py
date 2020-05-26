@@ -86,7 +86,7 @@ class ERANBase(VerifierAdaptor):
         input = self.input_preprocess(input)
         m_radius = radius / self.coef
 
-        image = input.numpy().reshape(-1)
+        image = input.permute(1, 2, 0).contiguous().numpy().reshape(-1)
         specLB = np.copy(image)
         specUB = np.copy(image)
 
@@ -117,6 +117,7 @@ class ERANBase(VerifierAdaptor):
                     return False
 
         else:
+            raise Exception("Wrong prediction... This should not happen according to evaluate.py")
             # print('Prediction is wrong')
             return False
 
@@ -128,7 +129,8 @@ class AI2Adaptor(ERANBase):
 
         self.config = {
             'domain': 'deeppoly',
-            'complete': True
+            'complete': True,
+            'numproc': 20
         }
 
 
@@ -139,7 +141,8 @@ class DeepZonoAdaptor(ERANBase):
 
         self.config = {
             'domain': 'deepzono',
-            'complete': False
+            'complete': False,
+            'numproc': 20
         }
 
 
@@ -150,7 +153,8 @@ class RefineZonoAdaptor(ERANBase):
 
         self.config = {
             'domain': 'refinezono',
-            'complete': False
+            'complete': False,
+            'numproc': 20
         }
 
 
@@ -161,7 +165,8 @@ class DeepPolyAdaptor(ERANBase):
 
         self.config = {
             'domain': 'deeppoly',
-            'complete': False
+            'complete': False,
+            'numproc': 20
         }
 
 
@@ -172,7 +177,8 @@ class RefinePolyAdaptor(ERANBase):
 
         self.config = {
             'domain': 'refinepoly',
-            'complete': False
+            'complete': False,
+            'numproc': 20
         }
 
 
@@ -192,6 +198,7 @@ class KReluAdaptor(ERANBase):
             'complete': False,
             'dyn_krelu': domain == 'dynamic',
             'use_2relu': domain == 2,
-            'use_3relu': domain == 3
+            'use_3relu': domain == 3,
+            'numproc': 20
         }
 

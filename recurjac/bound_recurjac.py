@@ -13,7 +13,7 @@
 ##
 
 import os
-from numba import njit, prange
+from numba import njit, prange, config
 import numpy as np
 import inspect
 from .activation_functions import *
@@ -30,6 +30,8 @@ grad_sigmoid_wrapper = """
 def get_grad_bounds_wrapper(lb, ub):
     return sigmoid_grad_bounds(lb, ub, grad_f = {})
 """
+
+config.NUMBA_NUM_THREADS = 20
 
 # upper bound of sigmoid familiy's gradient, given a input range lb and ub
 # returns: lower and upper bound of gradient in that region

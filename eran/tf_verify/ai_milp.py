@@ -514,7 +514,8 @@ def get_bounds_for_layer_with_milp(nn, LB_N0, UB_N0, layerno, abs_layer_count, o
 
     neuron_map = [0]*len(lbi)
 
-    model.setParam(GRB.Param.TimeLimit, timeout)
+    model.setParam(GRB.Param.TimeLimit, 70)
+    # model.setParam(GRB.Param.TimeLimit, timeout)
     model.setParam(GRB.Param.Threads, 2)
     output_counter = counter
 
@@ -602,6 +603,7 @@ def verify_network_with_milp(nn, LB_N0, UB_N0, nlb, nub, constraints):
 
     counter, var_list, model = create_model(nn, LB_N0, UB_N0, nlb, nub, None, numlayer, True,relu_needed)
 
+    model.setParam('TimeLimit', 70)
     # model.setParam('TimeLimit', config.timeout_milp)
 
     for and_list in constraints:

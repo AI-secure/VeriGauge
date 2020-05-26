@@ -20,6 +20,8 @@ from cnn_cert.cnn_bounds_full import *
 import cnn_cert.fastlin.save_nlayer_weights as nl
 from cnn_cert.fastlin.get_bounds_ours import compute_worst_bound
 
+global graph
+global sess
 
 def sequential_torch2keras(torch_model, dataset):
     """
@@ -29,130 +31,138 @@ def sequential_torch2keras(torch_model, dataset):
     :return: the transformed Keras model
     """
 
-    ret = keras.Sequential()
+    global graph
+    global sess
+    graph = tf.Graph()
+    sess = tf.Session(graph=graph,
+                      config=tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.5)))
 
-    assert isinstance(torch_model, nn.Sequential)
+    with sess.as_default():
+        with graph.as_default():
+            ret = keras.Sequential()
 
-    input_shape = get_input_shape(dataset)
-    new_input_shape = (input_shape[1], input_shape[2], input_shape[0])
+            assert isinstance(torch_model, nn.Sequential)
 
-    # before meeting the flatten layer, we transform each channel-first layer to the corresponding channel-last one
-    # after meeting the flatten layer, we analyze the first layer and transform the weight matrix
-    meet_flatten = False
-    shape_before_flatten = None
-    transposed = False
-    first_layer = True
+            input_shape = get_input_shape(dataset)
+            new_input_shape = (input_shape[1], input_shape[2], input_shape[0])
 
-    for layer in torch_model:
-        if first_layer:
-            kwargs = {'input_shape': new_input_shape}
-            first_layer = False
-        else:
-            kwargs = {}
-
-        if isinstance(layer, nn.Conv2d):
-            # we don't permit conv2d layer after flatten
-            assert meet_flatten is False
-            # by default, we assume zero-padding size is to allow the "same" padding configuration in keras.Conv2D
-            # since cnn-cert only supports keras.Conv2D but not zero padding layers
-            # print('  in', layer.in_channels)
-            # print('  out', layer.out_channels)
-            # print('  stride', layer.stride)
-            # print('  padding', layer.padding)
-            # print('  paddingmode', layer.padding_mode)
-            # print('  kernelsize', layer.kernel_size)
-            # print('  weight shape', layer.weight.size())
-            # if layer.bias is not None:
-            #     print('  bias shape', layer.bias.size())
-
-            new_layer = keras.layers.Conv2D(layer.out_channels, layer.kernel_size, layer.stride,
-                                            'valid' if layer.padding[0] == 0 else 'same',
-                                            'channels_last',
-                                            use_bias=layer.bias is not None,
-                                            **kwargs)
-
-            ret.add(new_layer)
-            # print(ret.output_shape)
-
-            new_weights = [layer.weight.cpu().detach().numpy().transpose(2, 3, 1, 0)]
-            if layer.bias is not None:
-                new_weights.append(layer.bias.cpu().detach().numpy())
-            new_layer.set_weights(new_weights)
-
-            # print('  new weight/bias len:', len(new_layer.get_weights()))
-            # print('  new weight shape:', new_layer.get_weights()[0].shape)
-            # print('  new bias shape:', new_layer.get_weights()[1].shape)
-
-        elif isinstance(layer, nn.AvgPool2d):
-            # we don't permit avgpool2d layer after flatten
-            assert meet_flatten is False
-
-            new_layer = keras.layers.AvgPool2D(layer.kernel_size, layer.stride,
-                                               'valid' if layer.padding[0] == 0 else 'same',
-                                               data_format='channels_last',
-                                               **kwargs)
-            ret.add(new_layer)
-
-        elif isinstance(layer, nn.MaxPool2d):
-            # we don't permit maxpool2d layer after flatten
-            assert meet_flatten is False
-
-            new_layer = keras.layers.MaxPool2D(layer.kernel_size, layer.stride,
-                                               'valid' if layer.padding[0] == 0 else 'same',
-                                               data_format='channels_last', **kwargs)
-            ret.add(new_layer)
-
-        elif isinstance(layer, nn.ReLU):
-            ret.add(keras.layers.Activation('relu', **kwargs))
-
-        elif isinstance(layer, nn.Tanh):
-            ret.add(keras.layers.Activation('tanh', **kwargs))
-
-        elif isinstance(layer, nn.Sigmoid):
-            ret.add(keras.layers.Activation('sigmoid', **kwargs))
-
-        elif isinstance(layer, models.zoo.Flatten):
-            meet_flatten = True
+            # before meeting the flatten layer, we transform each channel-first layer to the corresponding channel-last one
+            # after meeting the flatten layer, we analyze the first layer and transform the weight matrix
+            meet_flatten = False
+            shape_before_flatten = None
             transposed = False
-            if 'input_shape' in kwargs:
-                shape_before_flatten = new_input_shape
-            else:
-                shape_before_flatten = ret.output_shape[1:]
-            ret.add(keras.layers.Flatten(data_format='channels_last', **kwargs))
+            first_layer = True
 
-        elif isinstance(layer, nn.Linear) or isinstance(layer, FlattenConv2D):
-            # print('  in dim', layer.in_features)
-            # print('  out dim', layer.out_features)
-            weights = [layer.weight.cpu().detach().numpy().T]
-            if layer.bias is not None:
-                weights.append(layer.bias.cpu().detach().numpy())
-            # print([x.shape for x in weights])
+            for layer in torch_model:
+                if first_layer:
+                    kwargs = {'input_shape': new_input_shape}
+                    first_layer = False
+                else:
+                    kwargs = {}
 
-            new_layer = keras.layers.Dense(layer.out_features, **kwargs)
-            ret.add(new_layer)
-            # print([x.shape for x in new_layer.get_weights()])
+                if isinstance(layer, nn.Conv2d):
+                    # we don't permit conv2d layer after flatten
+                    assert meet_flatten is False
+                    # by default, we assume zero-padding size is to allow the "same" padding configuration in keras.Conv2D
+                    # since cnn-cert only supports keras.Conv2D but not zero padding layers
+                    # print('  in', layer.in_channels)
+                    # print('  out', layer.out_channels)
+                    # print('  stride', layer.stride)
+                    # print('  padding', layer.padding)
+                    # print('  paddingmode', layer.padding_mode)
+                    # print('  kernelsize', layer.kernel_size)
+                    # print('  weight shape', layer.weight.size())
+                    # if layer.bias is not None:
+                    #     print('  bias shape', layer.bias.size())
 
-            if meet_flatten and not transposed:
-                # print('transposed here')
-                h, w, c = shape_before_flatten
-                mapping = [k * h * w + i * w + j for i in range(h) for j in range(w) for k in range(c)]
-                # print(mapping)
-                weights[0] = weights[0][mapping]
-                # print([x.shape for x in weights])
-                transposed = True
-            new_layer.set_weights(weights)
+                    new_layer = keras.layers.Conv2D(layer.out_channels, layer.kernel_size, layer.stride,
+                                                    'valid' if layer.padding[0] == 0 else 'same',
+                                                    'channels_last',
+                                                    use_bias=layer.bias is not None,
+                                                    **kwargs)
 
-        elif isinstance(layer, nn.Dropout):
-            rate = layer.p
-            ret.add(keras.layers.Dropout(rate))
+                    ret.add(new_layer)
+                    # print(ret.output_shape)
 
-        else:
-            raise Exception(f'Unsupported layer type {layer.__class__.__name__}')
+                    new_weights = [layer.weight.cpu().detach().numpy().transpose(2, 3, 1, 0)]
+                    if layer.bias is not None:
+                        new_weights.append(layer.bias.cpu().detach().numpy())
+                    new_layer.set_weights(new_weights)
+
+                    # print('  new weight/bias len:', len(new_layer.get_weights()))
+                    # print('  new weight shape:', new_layer.get_weights()[0].shape)
+                    # print('  new bias shape:', new_layer.get_weights()[1].shape)
+
+                elif isinstance(layer, nn.AvgPool2d):
+                    # we don't permit avgpool2d layer after flatten
+                    assert meet_flatten is False
+
+                    new_layer = keras.layers.AvgPool2D(layer.kernel_size, layer.stride,
+                                                       'valid' if layer.padding[0] == 0 else 'same',
+                                                       data_format='channels_last',
+                                                       **kwargs)
+                    ret.add(new_layer)
+
+                elif isinstance(layer, nn.MaxPool2d):
+                    # we don't permit maxpool2d layer after flatten
+                    assert meet_flatten is False
+
+                    new_layer = keras.layers.MaxPool2D(layer.kernel_size, layer.stride,
+                                                       'valid' if layer.padding[0] == 0 else 'same',
+                                                       data_format='channels_last', **kwargs)
+                    ret.add(new_layer)
+
+                elif isinstance(layer, nn.ReLU):
+                    ret.add(keras.layers.Activation('relu', **kwargs))
+
+                elif isinstance(layer, nn.Tanh):
+                    ret.add(keras.layers.Activation('tanh', **kwargs))
+
+                elif isinstance(layer, nn.Sigmoid):
+                    ret.add(keras.layers.Activation('sigmoid', **kwargs))
+
+                elif isinstance(layer, models.zoo.Flatten):
+                    meet_flatten = True
+                    transposed = False
+                    if 'input_shape' in kwargs:
+                        shape_before_flatten = new_input_shape
+                    else:
+                        shape_before_flatten = ret.output_shape[1:]
+                    ret.add(keras.layers.Flatten(data_format='channels_last', **kwargs))
+
+                elif isinstance(layer, nn.Linear) or isinstance(layer, FlattenConv2D):
+                    # print('  in dim', layer.in_features)
+                    # print('  out dim', layer.out_features)
+                    weights = [layer.weight.cpu().detach().numpy().T]
+                    if layer.bias is not None:
+                        weights.append(layer.bias.cpu().detach().numpy())
+                    # print([x.shape for x in weights])
+
+                    new_layer = keras.layers.Dense(layer.out_features, **kwargs)
+                    ret.add(new_layer)
+                    # print([x.shape for x in new_layer.get_weights()])
+
+                    if meet_flatten and not transposed:
+                        # print('transposed here')
+                        h, w, c = shape_before_flatten
+                        mapping = [k * h * w + i * w + j for i in range(h) for j in range(w) for k in range(c)]
+                        # print(mapping)
+                        weights[0] = weights[0][mapping]
+                        # print([x.shape for x in weights])
+                        transposed = True
+                    new_layer.set_weights(weights)
+
+                elif isinstance(layer, nn.Dropout):
+                    rate = layer.p
+                    ret.add(keras.layers.Dropout(rate))
+
+                else:
+                    raise Exception(f'Unsupported layer type {layer.__class__.__name__}')
 
     return ret
 
 
-def check_consistency(model, k_model, input_shape) -> bool:
+def check_consistency(model, k_model, input_shape, mode='channels_last') -> bool:
     """
         Check the inconsistency between the torch model and the transformed Keras model
         By generating random input data
@@ -164,7 +174,10 @@ def check_consistency(model, k_model, input_shape) -> bool:
     data = np.random.random(input_shape)
     model.eval()
     pred1 = model(torch.Tensor(data).unsqueeze(0).cuda()).cpu().detach().numpy()
-    pred2 = k_model.predict(np.expand_dims(data.transpose((1,2,0)), 0))
+    if mode == 'channels_last':
+        pred2 = k_model.predict(np.expand_dims(data.transpose((1,2,0)), 0))
+    else:
+        pred2 = k_model.predict(np.expand_dims(data, 0))
 
     # print(pred1)
     # print(pred2)
@@ -221,13 +234,18 @@ class CNNCertBase(VerifierAdaptor):
         new_input_shape = (input_shape[1], input_shape[2], input_shape[0])
         self.k_model = sequential_torch2keras(self.model, dataset)
 
-        print(self.k_model.summary())
-        try:
-            assert check_consistency(self.model, self.k_model, input_shape) == True
-        except:
-            raise Exception("Somehow the transformed model behaves differently from the original model.")
+        global graph
+        global sess
+        with sess.as_default():
+            with graph.as_default():
 
-        self.new_model = Model(self.k_model, new_input_shape)
+                print(self.k_model.summary())
+                try:
+                    assert check_consistency(self.model, self.k_model, input_shape) == True
+                except:
+                    raise Exception("Somehow the transformed model behaves differently from the original model.")
+
+                self.new_model = Model(self.k_model, new_input_shape)
 
         # Set correct linear_bounds function
         self.linear_bounds = None
@@ -257,28 +275,32 @@ class CNNCertAdaptor(CNNCertBase):
 
         input = self.input_preprocess(input)
 
-        preds = self.new_model.model.predict(input.unsqueeze(0).numpy())
-        pred = preds[0]
-        pred_label = np.argmax(pred, axis=0)
+        global graph
+        global sess
+        with sess.as_default():
+            with graph.as_default():
+                preds = self.new_model.model.predict(input.unsqueeze(0).numpy())
+                pred = preds[0]
+                pred_label = np.argmax(pred, axis=0)
 
-        if pred_label != label:
-            return False
-
-        for target_label in range(self.num_classes):
-            if target_label != pred_label:
-                weights = self.new_model.weights[:-1]
-                biases = self.new_model.biases[:-1]
-                shapes = self.new_model.shapes[:-1]
-                W, b, s = self.new_model.weights[-1], self.new_model.biases[-1], self.new_model.shapes[-1]
-                last_weight = (W[pred_label, :, :, :] - W[target_label, :, :, :]).reshape([1] + list(W.shape[1:]))
-                weights.append(last_weight)
-                biases.append(np.asarray([b[pred_label] - b[target_label]]))
-                shapes.append((1, 1, 1))
-                LB, UB = find_output_bounds(weights, biases, shapes, self.new_model.pads, self.new_model.strides, self.new_model.sizes, self.new_model.types, input.numpy(), m_radius, p_n, self.linear_bounds)
-                if LB <= 0:
+                if pred_label != label:
                     return False
 
-        return True
+                for target_label in range(self.num_classes):
+                    if target_label != pred_label:
+                        weights = self.new_model.weights[:-1]
+                        biases = self.new_model.biases[:-1]
+                        shapes = self.new_model.shapes[:-1]
+                        W, b, s = self.new_model.weights[-1], self.new_model.biases[-1], self.new_model.shapes[-1]
+                        last_weight = (W[pred_label, :, :, :] - W[target_label, :, :, :]).reshape([1] + list(W.shape[1:]))
+                        weights.append(last_weight)
+                        biases.append(np.asarray([b[pred_label] - b[target_label]]))
+                        shapes.append((1, 1, 1))
+                        LB, UB = find_output_bounds(weights, biases, shapes, self.new_model.pads, self.new_model.strides, self.new_model.sizes, self.new_model.types, input.numpy(), m_radius, p_n, self.linear_bounds)
+                        if LB <= 0:
+                            return False
+
+                return True
 
 def fn(correct, predicted):
     return tf.nn.softmax_cross_entropy_with_logits(labels=correct,
@@ -296,23 +318,27 @@ class FastLinSparseAdaptor(CNNCertBase):
         new_input_shape = (input_shape[1], input_shape[2], input_shape[0])
         self.k_model = sequential_torch2keras(model_transform(self.model, input_shape), dataset)
 
-        # Save the transformed Keras model to a temporary place so that the tool can read from file
-        # The tool can only init model from file...
-        sgd = SGD(lr=0.01, decay=1e-5, momentum=0.9, nesterov=True)
-        self.k_model.compile(loss=fn,
-                      optimizer=sgd,
-                      metrics=['accuracy'])
-        self.k_model.save('tmp/tmp.pt')
+        global graph
+        global sess
+        with sess.as_default():
+            with graph.as_default():
+                # Save the transformed Keras model to a temporary place so that the tool can read from file
+                # The tool can only init model from file...
+                sgd = SGD(lr=0.01, decay=1e-5, momentum=0.9, nesterov=True)
+                self.k_model.compile(loss=fn,
+                              optimizer=sgd,
+                              metrics=['accuracy'])
+                self.k_model.save('tmp/tmp.pt')
 
-        self.new_model = nl.CNNModel('tmp/tmp.pt', new_input_shape)
-        self.weights = self.new_model.weights
-        self.biases = self.new_model.biases
+                self.new_model = nl.CNNModel('tmp/tmp.pt', new_input_shape)
+                self.weights = self.new_model.weights
+                self.biases = self.new_model.biases
 
-        # print(self.new_model.summary())
-        try:
-            check_consistency(self.model, self.k_model, input_shape)
-        except Exception:
-            raise Exception("Somehow the transformed model behaves differently from the original model.")
+                # print(self.new_model.summary())
+                try:
+                    check_consistency(self.model, self.k_model, input_shape)
+                except Exception:
+                    raise Exception("Somehow the transformed model behaves differently from the original model.")
 
         self.LP = False
         self.LPFULL = False
@@ -326,7 +352,11 @@ class FastLinSparseAdaptor(CNNCertBase):
 
         input = self.input_preprocess(input)
 
-        preds = self.new_model.model.predict(input.unsqueeze(0).numpy())
+        global graph
+        global sess
+        with sess.as_default():
+            with graph.as_default():
+                preds = self.new_model.model.predict(input.unsqueeze(0).numpy())
         pred = preds[0]
         pred_label = np.argmax(pred, axis=0)
 

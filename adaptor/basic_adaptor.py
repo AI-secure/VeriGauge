@@ -1,24 +1,29 @@
 from time import time
 import datetime
+import sys
 import torch.nn as nn
 import tensorflow as tf
 import numpy as np
 import numpy.linalg as la
 import cvxpy as cp
+import torch
 
 from adaptor.adaptor import Adaptor
 from cleverhans.attacks import ProjectedGradientDescent, CarliniWagnerL2
 from cleverhans.model import CallableModelWrapper
 from cleverhans.utils_pytorch import convert_pytorch_model_to_tf
 
-from datasets import NormalizeLayer, get_num_classes
+from datasets import NormalizeLayer, get_num_classes, get_input_shape
 
 from basic.models import model_transform
 from basic.intervalbound import IntervalFastLinBound, IntervalBound, FastIntervalBound
 from basic.milp import MILPVerifier
+from basic.fastmilp import FastMILPVerifier
 from basic.percysdp import PercySDP
 from basic.components import BaselinePointVerifierExt
 
+# global graph
+# graph = tf.get_default_graph()
 
 class BasicAdaptor(Adaptor):
     """
@@ -35,6 +40,7 @@ class BasicAdaptor(Adaptor):
         self.coef = 1.0
         if isinstance(self.model[0], NormalizeLayer):
             self.coef = min(self.model[0].orig_sds)
+        print(self.coef)
 
 class CleanAdaptor(BasicAdaptor):
     """
@@ -44,7 +50,9 @@ class CleanAdaptor(BasicAdaptor):
 
     def verify(self, input, label, norm_type, radius):
         EPS = 1e-6
-        assert radius <= EPS
+        # EPS = 0.02
+        if radius > EPS:
+            return False
         xs = input.unsqueeze(0)
         clean_preds = self.model(xs.cuda()).detach().cpu().numpy()
         clean_pred = np.argmax(clean_preds[0])
@@ -60,12 +68,22 @@ class PGDAdaptor(BasicAdaptor):
     def __init__(self, dataset, model):
         super(PGDAdaptor, self).__init__(dataset, model)
 
-        self.config = tf.ConfigProto()
+        self.config = tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.5))
         self.config.gpu_options.allow_growth = True
-        self.sess = tf.Session(config=self.config)
+        self.graph = tf.Graph()
+        self.sess = tf.Session(graph=self.graph, config=self.config)
 
-        self.tf_model = convert_pytorch_model_to_tf(self.model)
-        self.ch_model = CallableModelWrapper(self.tf_model, output_layer='logits')
+        input_shape = get_input_shape(dataset)
+
+        with self.sess.graph.as_default():
+            with self.sess.as_default():
+                self.tf_model = convert_pytorch_model_to_tf(self.model)
+                self.ch_model = CallableModelWrapper(self.tf_model, output_layer='logits')
+
+                self.x_op = tf.placeholder(tf.float32, shape=(None, input_shape[0], input_shape[1], input_shape[2],))
+                self.attk = ProjectedGradientDescent(self.ch_model, sess=self.sess)
+
+        self.adv_preds_ops = dict()
 
     def verify(self, input, label, norm_type, radius):
 
@@ -80,20 +98,20 @@ class PGDAdaptor(BasicAdaptor):
         if radius == 0:
             return True
 
-        x_op = tf.placeholder(tf.float32, shape=(None, input.shape[0], input.shape[1], input.shape[2],))
-        attk = ProjectedGradientDescent(self.ch_model, sess=self.sess)
-        params = {'eps': radius,
-                  'clip_min': 0.0,
-                  'clip_max': 1.0,
-                  'eps_iter': radius / 50.0,
-                  'nb_iter': 100,
-                  'rand_init': False}
-        adv_x = attk.generate(x_op, **params)
-        adv_preds_op = self.tf_model(adv_x)
+        with self.sess.graph.as_default():
+            with self.sess.as_default():
+                if radius not in self.adv_preds_ops:
+                    params = {'eps': radius,
+                              'clip_min': 0.0,
+                              'clip_max': 1.0,
+                              'eps_iter': radius / 50.0,
+                              'nb_iter': 100,
+                              'rand_init': False}
+                    adv_x = self.attk.generate(self.x_op, **params)
+                    self.adv_preds_ops[radius] = self.tf_model(adv_x)
+                (adv_preds,) = self.sess.run((self.adv_preds_ops[radius],), feed_dict={self.x_op: xs})
 
-        (adv_preds,) = self.sess.run((adv_preds_op,), feed_dict={x_op: xs})
-
-        adv_pred = np.argmax(adv_preds[0])
+                adv_pred = np.argmax(adv_preds[0])
         return adv_pred == label
 
 
@@ -229,12 +247,14 @@ class RealAdaptorBase(VerifierAdaptor):
         return True
 
 
-class IBPAdaptor(RealAdaptorBase):
+class IBPAdaptor(VerifierAdaptor):
     """
         Interval Bound Propagation
     """
-    def prepare_solver(self, in_shape):
-        self.bound = FastIntervalBound(self.new_model, in_shape, self.in_min, self.in_max)
+    def __init__(self, dataset, model):
+        super(IBPAdaptor, self).__init__(dataset, model)
+        in_shape = get_input_shape(dataset)
+        self.bound = FastIntervalBound(self.model, in_shape, self.in_min, self.in_max)
 
     def verify(self, input, label, norm_type, radius):
         """
@@ -242,14 +262,6 @@ class IBPAdaptor(RealAdaptorBase):
         """
         # only support Linfty norm
         assert norm_type == 'inf'
-        if self.new_model is None:
-            # init at the first time
-            before = time()
-            print(f"Init model for {self.__class__.__name__}...")
-            in_shape = list(input.shape)
-            self.prepare_solver(in_shape)
-            after = time()
-            print("Init done, time", str(datetime.timedelta(seconds=(after - before))),)
 
         # firstly check the clean prediction
         input = self.input_preprocess(input)
@@ -259,6 +271,7 @@ class IBPAdaptor(RealAdaptorBase):
         if clean_pred != label:
             return False
 
+        input = torch.Tensor(input)
         m_radius = radius / self.coef
         self.bound.calculate_bound(input, m_radius)
 
@@ -286,7 +299,7 @@ class MILPAdaptor(RealAdaptorBase):
 
     def __init__(self, dataset, model, timeout=30):
         super(MILPAdaptor, self).__init__(dataset, model)
-        cp.settings.SOLVE_TIME = timeout
+        self.timeout = timeout
 
     def prepare_solver(self, in_shape):
         self.prebound = IntervalFastLinBound(self.new_model, in_shape, self.in_min, self.in_max)
@@ -325,14 +338,78 @@ class MILPAdaptor(RealAdaptorBase):
         for i in range(get_num_classes(self.dataset)):
             if i != label:
                 self.bound.prepare_verify(label, i)
-                # try:
-                # self.bound.prob.solve(verbose=True)
-                self.bound.prob.solve(solver=cp.GUROBI, verbose=False)
-                # except:
-                #     return False
+                try:
+                    # self.bound.prob.solve(verbose=True)
+                    # model.setParam(GRB.Param.TimeLimit, timeout)
+                    self.bound.prob.solve(solver=cp.GUROBI, verbose=False, BestObjStop=-1e-6, TimeLimit=70, Threads=20)
+                except:
+                    return False
+                print(self.bound.prob.status, self.bound.prob.value, file=sys.stderr)
                 if self.bound.prob.status not in ['optimal'] or self.bound.prob.value < 0.:
                     return False
         return True
+
+
+
+class FastMILPAdaptor(RealAdaptorBase):
+    """
+        MILP from Tjeng et al
+    """
+
+    def __init__(self, dataset, model, timeout=30):
+        super(FastMILPAdaptor, self).__init__(dataset, model)
+        cp.settings.SOLVE_TIME = timeout
+
+    def prepare_solver(self, in_shape):
+        self.prebound = FastIntervalBound(self.model, in_shape, self.in_min, self.in_max)
+        self.bound = FastMILPVerifier(self.model, in_shape, self.in_min, self.in_max)
+
+    def verify(self, input, label, norm_type, radius):
+        """
+            Here we overwrite the base class verify() method
+        """
+        # only support Linfty norm
+        assert norm_type == 'inf'
+        if self.new_model is None:
+            # init at the first time
+            before = time()
+            print(f"Init model for {self.__class__.__name__}...")
+            in_shape = list(input.shape)
+            self.build_new_model(input)
+            self.prepare_solver(in_shape)
+            after = time()
+            print("Init done, time", str(datetime.timedelta(seconds=(after - before))), )
+
+        # firstly check the clean prediction
+        input = self.input_preprocess(input)
+        xs = input.unsqueeze(0)
+        clean_preds = self.model(xs.cuda()).detach().cpu().numpy()
+        clean_pred = np.argmax(clean_preds[0])
+        if clean_pred != label:
+            return False
+
+        m_radius = radius / self.coef
+
+        # input_cons = input.contiguous().view(-1)
+        self.prebound.calculate_bound(input, m_radius)
+        self.bound.construct(self.prebound.l, self.prebound.u, input, m_radius)
+
+        for i in range(get_num_classes(self.dataset)):
+            if i != label:
+                if not self.bound.verify(label, i):
+                    return False
+                # try:
+                # self.bound.prob.solve(verbose=True)
+                # model.setParam(GRB.Param.TimeLimit, timeout)
+                # self.bound.prob.solve(solver=cp.GUROBI, verbose=False, BestObjStop=-1e-6, TimeLimit=70, Threads=20)
+                # except:
+                #     return False
+                # print(self.bound.prob.status, self.bound.prob.value, file=sys.stderr)
+                # if self.bound.prob.status not in ['optimal'] or self.bound.prob.value < 0.:
+                #     return False
+                # return False
+        return True
+
 
 
 class PercySDPAdaptor(RealAdaptorBase):

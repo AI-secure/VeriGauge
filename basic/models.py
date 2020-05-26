@@ -3,6 +3,8 @@ from torch import nn
 import functools
 from adaptor.basic_adaptor import NormalizeLayer
 from models.test_model import Flatten
+import numpy as np
+from numba import jit, njit
 
 
 class FlattenConv2D(nn.Module):
@@ -10,7 +12,7 @@ class FlattenConv2D(nn.Module):
         Transforms the 2D convolutional layer to fully-connected layer with fixed weights.
     """
 
-    def __init__(self, orgnl_layer, shape):
+    def __init__(self, orgnl_layer, shape, load_weight=True):
         super(FlattenConv2D, self).__init__()
 
         self.orgnl_layer = orgnl_layer
@@ -47,46 +49,87 @@ class FlattenConv2D(nn.Module):
 
         conv_weight = conv_weight.contiguous().view(w_cells)
 
-        cnt = 0
         weight = torch.zeros((out_cells, in_cells), dtype=torch.double).cuda()
-        for o in range(self.out_shape[0]):
-            for j in range(self.out_shape[1]):
-                for k in range(self.out_shape[2]):
-                    out_idx = o * self.out_shape[1] * self.out_shape[2] + j * self.out_shape[2] + k
+        bias = torch.zeros((out_cells,), dtype=torch.double).cuda()
+        if load_weight:
+            conv_weight = conv_weight.detach().cpu().numpy()
+            conv_bias = conv_bias.detach().cpu().numpy()
+            weight = np.zeros((out_cells, in_cells), np.double)
+            bias = np.zeros((out_cells,), np.double)
+
+            FlattenConv2D.load_weight(self.in_shape, self.out_shape, padding, stride, kernel_size, weight_shape, conv_weight, conv_bias, weight, bias)
+
+            weight = torch.Tensor(weight).cuda()
+            bias = torch.Tensor(bias).cuda()
+            # cnt = 0
+            # for o in range(self.out_shape[0]):
+            #     for j in range(self.out_shape[1]):
+            #         for k in range(self.out_shape[2]):
+            #             out_idx = o * self.out_shape[1] * self.out_shape[2] + j * self.out_shape[2] + k
+            #             for jj in range(kernel_size[0]):
+            #                 for kk in range(kernel_size[1]):
+            #                     in_x = - padding[0] + stride[0] * j + jj
+            #                     in_y = - padding[1] + stride[1] * k + kk
+            #                     if in_x < 0 or in_x >= self.in_shape[1] or in_y < 0 or in_y >= self.in_shape[2]:
+            #                         continue
+            #                     for i in range(self.in_shape[0]):
+            #                         in_idx = i * self.in_shape[1] * self.in_shape[2] + in_x * self.in_shape[2] + in_y
+            #                         w_idx = o * weight_shape[1] * weight_shape[2] * weight_shape[3] + \
+            #                                 i * weight_shape[2] * weight_shape[3] + \
+            #                                 jj * weight_shape[3] + \
+            #                                 kk
+            #                         weight[out_idx][in_idx] += conv_weight[w_idx]
+            #                         cnt += 1
+            # for o in range(self.out_shape[0]):
+            #     for j in range(self.out_shape[1]):
+            #         for k in range(self.out_shape[2]):
+            #             out_idx = o * self.out_shape[1] * self.out_shape[2] + j * self.out_shape[2] + k
+            #             bias[out_idx] = conv_bias[o]
+        self.weight = weight
+        self.bias = bias
+
+    @jit(nopython=True)
+    def load_weight(in_shape,
+                    out_shape,
+                    padding, stride, kernel_size, weight_shape,
+                    conv_weight, conv_bias,
+                    weight, bias):
+        cnt = 0
+        for o in range(out_shape[0]):
+            for j in range(out_shape[1]):
+                for k in range(out_shape[2]):
+                    out_idx = o * out_shape[1] * out_shape[2] + j * out_shape[2] + k
                     for jj in range(kernel_size[0]):
                         for kk in range(kernel_size[1]):
                             in_x = - padding[0] + stride[0] * j + jj
                             in_y = - padding[1] + stride[1] * k + kk
-                            if in_x < 0 or in_x >= self.in_shape[1] or in_y < 0 or in_y >= self.in_shape[2]:
+                            if in_x < 0 or in_x >= in_shape[1] or in_y < 0 or in_y >= in_shape[2]:
                                 continue
-                            for i in range(self.in_shape[0]):
-                                in_idx = i * self.in_shape[1] * self.in_shape[2] + in_x * self.in_shape[2] + in_y
+                            for i in range(in_shape[0]):
+                                in_idx = i * in_shape[1] * in_shape[2] + in_x * in_shape[2] + in_y
                                 w_idx = o * weight_shape[1] * weight_shape[2] * weight_shape[3] + \
                                         i * weight_shape[2] * weight_shape[3] + \
                                         jj * weight_shape[3] + \
                                         kk
                                 weight[out_idx][in_idx] += conv_weight[w_idx]
                                 cnt += 1
-        self.weight = weight
-
-        bias = torch.zeros((out_cells,), dtype=torch.double).cuda()
-        for o in range(self.out_shape[0]):
-            for j in range(self.out_shape[1]):
-                for k in range(self.out_shape[2]):
-                    out_idx = o * self.out_shape[1] * self.out_shape[2] + j * self.out_shape[2] + k
+        for o in range(out_shape[0]):
+            for j in range(out_shape[1]):
+                for k in range(out_shape[2]):
+                    out_idx = o * out_shape[1] * out_shape[2] + j * out_shape[2] + k
                     bias[out_idx] = conv_bias[o]
-        self.bias = bias
+        return weight, bias
 
     def forward(self, x):
         return torch.matmul(x, self.weight.t()) + self.bias
 
 
-def model_transform(model, in_shape):
+def model_transform(model, in_shape, load_weight=True):
     new_layers = [Flatten()]
     now_shape = in_shape
     for l in model:
         if isinstance(l, nn.modules.conv.Conv2d):
-            new_layer = FlattenConv2D(l, now_shape)
+            new_layer = FlattenConv2D(l, now_shape, load_weight)
             now_shape = new_layer.out_shape
             new_layers.append(new_layer)
         elif isinstance(l, nn.modules.activation.ReLU):

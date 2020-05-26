@@ -7,8 +7,11 @@ from recurjac.bound_base import get_weights_list, compute_bounds, compute_bounds
 from recurjac.bound_spectral import spectral_bound
 from recurjac.utils import binary_search
 
+from adaptor.cnncert_adaptor import check_consistency
+
 import datasets
 from datasets import NormalizeLayer
+from basic.models import FlattenConv2D, model_transform
 from models.test_model import Flatten
 from adaptor.basic_adaptor import VerifierAdaptor
 import tensorflow as tf
@@ -40,8 +43,8 @@ def torch2keras(dataset, model):
 
                 n += 1
                 if isinstance(layer, Flatten):
-                    ans.add(keras.layers.Flatten(**kwargs))
-                elif isinstance(layer, nn.Linear):
+                    ans.add(keras.layers.Flatten('channels_last', **kwargs))
+                elif isinstance(layer, nn.Linear) or isinstance(layer, FlattenConv2D):
                     i, o = layer.in_features, layer.out_features
                     l = keras.layers.Dense(o)
                     ans.add(l)
@@ -89,7 +92,17 @@ class RecurBaseModel(NLayerModel):
         The class functioning like NLayerModel in the original framework.
     """
     def __init__(self, dataset, model):
-        self.model, self.activation, self.activation_param = torch2keras(dataset, model)
+        self.model, self.activation, self.activation_param = torch2keras(dataset,
+                                                                         model_transform(model, datasets.get_input_shape(dataset)))
+
+        print(self.model.summary())
+
+        with sess.as_default():
+            with graph.as_default():
+                try:
+                    assert check_consistency(model, self.model, datasets.get_input_shape(dataset), 'channels_first') == True
+                except:
+                    raise Exception("Somehow the transformed model behaves differently from the original model.")
 
         with sess.as_default():
             with graph.as_default():
@@ -175,8 +188,9 @@ class RecurJacBase(VerifierAdaptor):
     def calc_radius(self, input, label, norm_type, upper=0.5, eps=1e-4) -> float:
         norm = {'1': 1, '2': 2, 'inf': np.inf}[norm_type]
         input = self.input_preprocess(input)
-        with graph.as_default():
-            preds = self.model.model.predict(input.unsqueeze(0).numpy())
+        with sess.as_default():
+            with graph.as_default():
+                preds = self.model.model.predict(input.unsqueeze(0).numpy())
         pred = preds[0]
         pred_label = np.argmax(pred, axis=0)
         if pred_label != label:

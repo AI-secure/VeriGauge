@@ -7,3 +7,5 @@ __pycache__/
 *.swp
 tmp/
 eran/data/acasxu
+experiments/data
+experiments/data2

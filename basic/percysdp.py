@@ -15,7 +15,7 @@ class PercySDP():
         Reimplementation of Percy Liang's SDP paper
     """
 
-    def __init__(self, model, in_shape):
+    def __init__(self, model, in_shape, timeout=50, threads=30):
         super(PercySDP, self).__init__()
 
         in_numel = None
@@ -60,6 +60,9 @@ class PercySDP():
 
         self.P = cp.Variable((self.tot_n, self.tot_n), symmetric=True)
 
+        self.timeout = timeout
+        self.threads = threads
+
     def run(self, bl, bu, y0, yp):
         constraints = [self.P >> 0, self.P[0][0] == 1.0]
 
@@ -78,9 +81,17 @@ class PercySDP():
         obj = (self.Ws[-1][yp] - self.Ws[-1][y0]) * self.P[- self.shapes[-2]:, 0] + self.bs[-1][yp] - self.bs[-1][y0]
 
         self.prob = cp.Problem(cp.Maximize(obj), constraints)
+        # self.prob.solve(solver=cp.MOSEK, verbose=True, mosek_params={
+        #     # 'optimizerMaxTime': self.timeout,
+        #     'MSK_DPAR_OPTIMIZER_MAX_TIME': self.timeout,
+        #     # 'numThreads': self.threads,
+        #     'MSK_IPAR_NUM_THREADS': self.threads,
+        #     # 'lowerObjCut': 0.,
+        #     'MSK_DPAR_LOWER_OBJ_CUT': 0.,
+        # })
         self.prob.solve(solver=cp.SCS, verbose=True, warm_start=True, eps=1e-2)
-        # print('status:', self.prob.status)
-        # print('optimal value:', self.prob.value)
+        print('status:', self.prob.status)
+        print('optimal value:', self.prob.value)
 
 
 

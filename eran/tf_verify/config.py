@@ -12,7 +12,8 @@ class config:
     dyn_krelu = False # dynamically select parameter k
     use_2relu = False # use 2-relu
     use_3relu = False # use 3-relu
-    numproc = multiprocessing.cpu_count() # number of processes for milp/lp/krelu
+    # numproc = multiprocessing.cpu_count() # number of processes for milp/lp/krelu
+    numproc = 20  # number of processes for milp/lp/krelu
     netname = None # the network name, the extension can be only .pyt, .tf and .meta
     epsilon = 0 # the epsilon for L_infinity perturbation
     zonotope = None # file to specify the zonotope matrix

@@ -174,8 +174,10 @@ class BaselinePointVerifierExt():
     """
         Extended by upper and lower bounds
     """
-    def __init__(self, model, in_shape, in_min, in_max, create_opt_vars=True):
+    def __init__(self, model, in_shape, in_min, in_max, create_opt_vars=True, timeout=50, threads=30):
         super(BaselinePointVerifierExt, self).__init__()
+
+        self.timeout, self.threads = timeout, threads
 
         in_numel = None
         num_layers = len([None for _ in model])
@@ -313,6 +315,14 @@ class BaselinePointVerifierExt():
         self.constraints.append((self.cmat << 0))
         self.prob = cp.Problem(cp.Minimize(self.s), self.constraints)
         self.prob.solve(solver=cp.SCS, verbose=True, warm_start=True, eps=1e-3)
+        # self.prob.solve(solver=cp.MOSEK, verbose=True, mosek_params={
+        #     # 'optimizerMaxTime': self.timeout,
+        #     'MSK_DPAR_OPTIMIZER_MAX_TIME': self.timeout,
+        #     # 'numThreads': self.threads,
+        #     'MSK_IPAR_NUM_THREADS': self.threads,
+        #     # 'lowerObjCut': 0.,
+        #     'MSK_DPAR_LOWER_OBJ_CUT': 0.,
+        # })
         print('status:', self.prob.status)
         print('optimial value:', self.prob.value)
 
