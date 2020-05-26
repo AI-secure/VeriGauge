@@ -216,8 +216,8 @@ class FastIntervalBound:
                 elif isinstance(l, nn.modules.activation.ReLU):
                     hasrelu = True
                 elif isinstance(l, Flatten):
-                    self.l[-1] = self.l[-1].reshape(-1)
-                    self.u[-1] = self.u[-1].reshape(-1)
+                    self.l[-1] = self.l[-1].contiguous().reshape(-1)
+                    self.u[-1] = self.u[-1].contiguous().reshape(-1)
                 else:
                     raise Exception(f"Unsupported layer type: {type(l)}")
             self.l = [x.contiguous().view(-1).cpu().numpy() for x in self.l]

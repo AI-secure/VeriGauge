@@ -261,9 +261,9 @@ def ppr(methods, dataset, models, weights, modes, cuda_ids, hide=True):
     --mode verify --mode radius \
     --cuda_ids 0 1>/dev/null
 
-~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight clean --mode verify --verify_timeout 3600 --cuda_ids 0 ; and \
-~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight adv1 --mode verify --verify_timeout 3600 --cuda_ids 0 ; and \
-~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight adv3 --mode verify --verify_timeout 3600 --cuda_ids 0 ; and \
-~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight cadv1 --mode verify --verify_timeout 3600 --cuda_ids 0 ; and \
-~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight cadv3 --mode verify --verify_timeout 3600 --cuda_ids 0
+~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight clean --mode verify --verify_timeout 36000 --cuda_ids 0 ; and \
+~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight adv1 --mode verify --verify_timeout 36000 --cuda_ids 0 ; and \
+~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight adv3 --mode verify --verify_timeout 36000 --cuda_ids 0 ; and \
+~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight cadv1 --mode verify --verify_timeout 36000 --cuda_ids 0 ; and \
+~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight cadv3 --mode verify --verify_timeout 36000 --cuda_ids 0
 

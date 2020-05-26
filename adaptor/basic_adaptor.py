@@ -358,7 +358,9 @@ class FastMILPAdaptor(RealAdaptorBase):
 
     def __init__(self, dataset, model, timeout=30):
         super(FastMILPAdaptor, self).__init__(dataset, model)
-        cp.settings.SOLVE_TIME = timeout
+        # cp.settings.SOLVE_TIME = timeout
+        in_shape = get_input_shape(dataset)
+        self.prepare_solver(in_shape)
 
     def prepare_solver(self, in_shape):
         self.prebound = FastIntervalBound(self.model, in_shape, self.in_min, self.in_max)
@@ -370,15 +372,15 @@ class FastMILPAdaptor(RealAdaptorBase):
         """
         # only support Linfty norm
         assert norm_type == 'inf'
-        if self.new_model is None:
-            # init at the first time
-            before = time()
-            print(f"Init model for {self.__class__.__name__}...")
-            in_shape = list(input.shape)
-            self.build_new_model(input)
-            self.prepare_solver(in_shape)
-            after = time()
-            print("Init done, time", str(datetime.timedelta(seconds=(after - before))), )
+        # if self.new_model is None:
+        #     # init at the first time
+        #     before = time()
+        #     print(f"Init model for {self.__class__.__name__}...")
+        #     in_shape = list(input.shape)
+        #     # self.build_new_model(input)
+        #     self.prepare_solver(in_shape)
+        #     after = time()
+        #     print("Init done, time", str(datetime.timedelta(seconds=(after - before))), )
 
         # firstly check the clean prediction
         input = self.input_preprocess(input)

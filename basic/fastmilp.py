@@ -26,7 +26,9 @@ class FastMILPVerifier:
         interval_ptr = 0
 
         m = gp.Model()
+        # print(self.in_min, self.in_max)
         x_in = m.addVars(*self.in_shape, lb=self.in_min, ub=self.in_max, vtype=GRB.CONTINUOUS, name="x_in")
+        # print(eps)
         low_x, high_x = x0 - eps, x0 + eps
         low_x = low_x.clamp(min=self.in_min, max=self.in_max)
         high_x = high_x.clamp(min=self.in_min, max=self.in_max)
@@ -169,7 +171,7 @@ class FastMILPVerifier:
                     tmp *= j
 
                 x = vars[-1]
-                y = m.addVars(tmp, lb=-1.0, vtype=GRB.CONTINUOUS, name=f'x_{no}')
+                y = m.addVars(tmp, lb=-BIGFLOAT, vtype=GRB.CONTINUOUS, name=f'x_{no}')
 
                 if len(cur_shape) == 1:
                     m.addConstrs(x == y, name=f'flatten_{no}')
