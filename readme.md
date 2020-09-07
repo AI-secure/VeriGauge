@@ -1,6 +1,6 @@
 # VeriGauger: United Toolbox for Major Robustness Verification Approaches for Deep Neural Networks
 
-llylly (linyi2@illinois.edu, [linyil.com](linyil.com)) @ UIUC
+llylly (linyi2@illinois.edu, [linyil.com](http://linyil.com/)) @ UIUC
 
 
 
