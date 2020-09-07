@@ -4,7 +4,7 @@ llylly (linyi2@illinois.edu, [linyil.com](http://linyil.com/)) @ Secure Learning
 
 
 
-This is a united toolbox containing representative robustness verification approaches for DNNs. The leader board for different approaches can be found here: https://github.com/AI-secure/Provable-Training-and-Verification-Approaches-Towards-Robust-Neural-Networks
+This is a united toolbox containing representative robustness verification approaches for DNNs. The leader board for different approaches can be found here: https://github.com/AI-secure/Provable-Training-and-Verification-Approaches-Towards-Robust-Neural-Networks.
 
 Related paper: "SoK: Certified Robustness for Deep Neural Networks".
 
@@ -25,7 +25,9 @@ Related paper: "SoK: Certified Robustness for Deep Neural Networks".
 
 
 
-[1] Reluplex: An Efficient SMT Solver for Verifying Deep Neural Networks. https://arxiv.org/abs/1702.01135.[2] Towards Fast Computation of Certified Robustness for ReLU Networks. http://proceedings.mlr.press/v80/weng18a.html.
+[1] Reluplex: An Efficient SMT Solver for Verifying Deep Neural Networks. https://arxiv.org/abs/1702.01135.
+
+[2] Towards Fast Computation of Certified Robustness for ReLU Networks. http://proceedings.mlr.press/v80/weng18a.html.
 
 
 
