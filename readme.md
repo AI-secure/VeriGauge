@@ -1,33 +1,31 @@
-# VeriGauger: United Toolbox for Major Robustness Verification Approaches for Deep Neural Networks
+# VeriGauge: United Toolbox for Major Robustness Verification Approaches for Deep Neural Networks
 
-llylly (linyi2@illinois.edu, [linyil.com](http://linyil.com/)) @ UIUC
-
-
-
-This is a united toolbox for running major robustness verification approaches for DNNs accompanying the paper "SoK: Certified Robustness for Deep Neural Networks".
+llylly (linyi2@illinois.edu, [linyil.com](http://linyil.com/)) @ Secure Learning Lab, UIUC
 
 
 
-- What is robustness verification approaches for DNNs?
+This is a united toolbox containing representative robustness verification approaches for DNNs. The leader board for different approaches can be found here: https://github.com/AI-secure/Provable-Training-and-Verification-Approaches-Towards-Robust-Neural-Networks
 
-- DNNs are vulnerable to adversarial examples. Given a model and an input x0, the robustness verification approaches can certify that there is no adversarial samples around x0 within the radius r. The complete verification of DNNs is NP-complete [1,2]. Therefore, current verification approaches usually use some relaxations, which results in outputing smaller r than the real maximum one.
+Related paper: "SoK: Certified Robustness for Deep Neural Networks".
+
+- What is robustness verification for DNNs?
+
+  DNNs are vulnerable to adversarial examples. Given a model and an input x0, the robustness verification approaches can certify that there are no adversarial samples around x0 within radius r. The complete verification of DNNs is NP-complete [1,2]. Therefore, current verification approaches usually leverage relaxations, which results in outputting smaller r than the real one.
+
 - What neural networks are supported?
-- Curently, existing approaches mainly support image classification neural networks for MNIST, CIFAR-10, and ImageNet. Though ImageNet networks are usually too large for non-randomized-smoothing-based verification approaches. Though a significantly amount of verification approaches support skip connections, max-pooling layers, etc, typical verification approaches mainly work on *feed-forward neural networks with ReLU activations*, containing only full-connected layers and convolutional layers.
 
+  Currently, existing approaches mainly support image classification tasks for MNIST, CIFAR-10, and ImageNet, and our toolbox supports all of them though networks for ImageNet are usually too large for standard non-probabilistic verification approaches. Though a significant amount of verification approaches support skip connections, max-pooling layers, etc, typical verification approaches mainly work on *feed-forward neural networks with ReLU activations*, containing only fully-connected layers and convolutional layers.
 
+**Main Features:**
 
-**Main Features**:
-
-1. A unified lightweight platform for running about $20$ verification approaches in simple PyTorch-based interface.
+1. A unified lightweight platform for running about 20 verification approaches in a simple PyTorch-based interface.
 2. Easily extensible to your own customized neural networks.
 3. Easily extensible to your own verification approaches.
 4. High-efficiency benefited from the lightweight structure.
 
 
 
-[1] Reluplex: An Efficient SMT Solver for Verifying Deep Neural Networks. https://arxiv.org/abs/1702.01135.
-
-[2] Towards Fast Computation of Certified Robustness for ReLU Networks. http://proceedings.mlr.press/v80/weng18a.html.
+[1] Reluplex: An Efficient SMT Solver for Verifying Deep Neural Networks. https://arxiv.org/abs/1702.01135.[2] Towards Fast Computation of Certified Robustness for ReLU Networks. http://proceedings.mlr.press/v80/weng18a.html.
 
 
 
@@ -62,7 +60,7 @@ This is a united toolbox for running major robustness verification approaches fo
 
 
 
-## Prerequisite
+## Prerequisites
 
 1. Find a server with GPU support and Linux / MacOS system. (The toolbox has been tested on Linux and MacOS. It should be possible to run on Windows, but we can't guarantee so.)
 
