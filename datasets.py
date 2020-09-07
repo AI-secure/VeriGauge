@@ -8,14 +8,8 @@ from torch.utils.data import Dataset
 # make sure your val directory is preprocessed to look like the train directory, e.g. by running this script
 # https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/valprep.sh
 IMAGENET_LOC_ENV = "IMAGENET_DIR"
-# on aisecure gpu1
 # os.environ[IMAGENET_LOC_ENV] = "/data/datasets/imagenet/ILSVRC2012"
-# on asedl
 os.environ[IMAGENET_LOC_ENV] = "/srv/local/data/ImageNet/ILSVRC2012_full"
-# on asedl but mount to aisecure gpu1
-# os.environ[IMAGENET_LOC_ENV] = "/home/linyi2/data_mnt/imagenet/ILSVRC2012"
-# on asedl but sync mount
-# os.environ[IMAGENET_LOC_ENV] = "/home/linyi2/data_mnt/local_imagenet/data/ImageNet/ILSVRC2012_full"
 
 # list of all datasets
 from constants import DATASETS

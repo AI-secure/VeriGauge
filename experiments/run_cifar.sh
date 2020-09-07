@@ -698,3 +698,12 @@
 ~/anaconda3/bin/python experiments/evaluate.py --method LPAll --dataset cifar10 --model F --weight cadv2 --mode radius --cuda_ids 2 1>/dev/null; and \
 ~/anaconda3/bin/python experiments/evaluate.py --method LPAll --dataset cifar10 --model F --weight cadv8 --mode verify --cuda_ids 2 1>/dev/null; and \
 ~/anaconda3/bin/python experiments/evaluate.py --method LPAll --dataset cifar10 --model F --weight cadv8 --mode radius --cuda_ids 2 1>/dev/null
+
+~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset cifar10 --model A --weight clean --mode verify --verify_timeout 36000 --cuda_ids 2 ; and \
+~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset cifar10 --model A --weight adv2 --mode verify --verify_timeout 36000 --cuda_ids 2 ; and \
+~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset cifar10 --model A --weight adv8 --mode verify --verify_timeout 36000 --cuda_ids 2 ; and \
+~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset cifar10 --model A --weight cadv2 --mode verify --verify_timeout 36000 --cuda_ids 2 ; and \
+~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset cifar10 --model A --weight cadv8 --mode verify --verify_timeout 36000 --cuda_ids 2
+
+~/anaconda3/bin/python experiments/evaluate.py --method kReLU --dataset cifar10 --model G --model C --model D --model E --model F --mode verify --mode radius --cuda_ids 0 1>/dev/null
+

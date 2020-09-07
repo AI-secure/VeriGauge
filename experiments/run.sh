@@ -267,3 +267,10 @@ def ppr(methods, dataset, models, weights, modes, cuda_ids, hide=True):
 ~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight cadv1 --mode verify --verify_timeout 36000 --cuda_ids 0 ; and \
 ~/anaconda3/bin/python experiments/evaluate.py --method PercySDP --dataset mnist --model A --weight cadv3 --mode verify --verify_timeout 36000 --cuda_ids 0
 
+
+~/anaconda3/bin/python experiments/evaluate.py \
+    --method AI2 \
+    --dataset mnist \
+    --model B --model G --model C --model D --model E --model F   \
+    --mode verify --mode radius \
+    --cuda_ids 2 1>/dev/null

@@ -2,8 +2,8 @@
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # ! Please change the following two path strings to you own one !
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-ELINA_PYTHON_INTERFACE_PATH = '/home/linyi2/pkgs/ELINA/python_interface'
-DEEPG_CODE_PATH = '/home/linyi2/pkgs/deepg/code'
+ELINA_PYTHON_INTERFACE_PATH = '/home/xxxxx/pkgs/ELINA/python_interface'
+DEEPG_CODE_PATH = '/home/xxxxx/pkgs/deepg/code'
 
 NORM_TYPES = ['0', '1', '2', 'inf']
 
