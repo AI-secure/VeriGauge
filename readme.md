@@ -10,7 +10,7 @@ This is a united toolbox for running major robustness verification approaches fo
 
 - What is robustness verification approaches for DNNs?
 
-- DNNs are vulnerable to adversarial examples. Given a model and an input $x_0$, the robustness verification approaches can certify that there is no adversarial samples around $x_0$ within the radius $r$. The complete verification of DNNs is NP-complete [1,2]. Therefore, current verification approaches usually use some relaxations, which results in outputing smaller $r$ than the real maximum one.
+- DNNs are vulnerable to adversarial examples. Given a model and an input x0, the robustness verification approaches can certify that there is no adversarial samples around x0 within the radius r. The complete verification of DNNs is NP-complete [1,2]. Therefore, current verification approaches usually use some relaxations, which results in outputing smaller r than the real maximum one.
 - What neural networks are supported?
 - Curently, existing approaches mainly support image classification neural networks for MNIST, CIFAR-10, and ImageNet. Though ImageNet networks are usually too large for non-randomized-smoothing-based verification approaches. Though a significantly amount of verification approaches support skip connections, max-pooling layers, etc, typical verification approaches mainly work on *feed-forward neural networks with ReLU activations*, containing only full-connected layers and convolutional layers.
 
@@ -25,37 +25,38 @@ This is a united toolbox for running major robustness verification approaches fo
 
 
 
-[1]: https://arxiv.org/abs/1702.01135	"Reluplex: An Efficient SMT Solver for Verifying Deep Neural Networks"
-[2]: http://proceedings.mlr.press/v80/weng18a.html	"Towards Fast Computation of Certified Robustness for ReLU Networks"
+[1] Reluplex: An Efficient SMT Solver for Verifying Deep Neural Networks. https://arxiv.org/abs/1702.01135.
+
+[2] Towards Fast Computation of Certified Robustness for ReLU Networks. http://proceedings.mlr.press/v80/weng18a.html.
 
 
 
 ## Supported Approach List
 
-| Approach Type      | ClassName            | Description & Path                                           | Comments                                                     |
-| ------------------ | -------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| *Normal Infernace* | CleanAdaptor         | The normal inference of the model. Implemented in `adaptor.basic_adaptor`. | Not a verification approach.                                 |
-| *Empirical Attack* | PGDAdaptor           | Based on Python toolbox `cleverhans`. Implemented in `adaptor.basic_adaptor`. | Not a verification approach, just provide upper bound of $r$ |
-| *Empirical Attack* | CWAdaptor            | Based on Python toolbox `cleverhans`. Implemented in `adaptor.basic_adaptor`. | Not a verification approach, just provide upper bound of $r$ |
-| MILP               | MILPAdaptor          | Reimplementation of [Tjeng et al's](https://arxiv.org/abs/1711.07356) MILP-based verification based on Python's Gurobi API. Adaptor in `adaptor.basic_adaptor`. Core in `basic.fastmilp.MILPVerifier`. | Complete Verification                                        |
-| SDP                | PercySDPAdaptor      | Reimplementation of [Raghunathan et al's](https://arxiv.org/abs/1811.01057) SDP-based verification based on `cvxpy`. Adaptor in `adaptor.basic_adaptor`. Core in `basic.percysdp`. |                                                              |
-| SDP                | FazlybSDPAdaptor     | Reimplementation of [Fazlyb et al's](https://arxiv.org/abs/1903.01287) SDP-based verification based on `cvxpy`. Adaptor in `adaptor.basic_adaptor`. Core in `basic.components.BaselinePointVerifierExt`. |                                                              |
-| Linear-Based       | FastLinIBPAdaptor    | Reimplementation of the combination of IBP and FastLin bound ($l$ and $u$ per layer are the maximum or minimum of two bounds respectively). Adaptor in `adaptor.basic_adaptor`. Core in `basic.intervalbound`. |                                                              |
-| Linear-Based       | FastLinAdaptor       | [Weng et al's](http://proceedings.mlr.press/v80/weng18a.html) linear bound propagation based verification approach. Adaptor in `adaptor.recurjac_adaptor`. Core in `recurjac/`. |                                                              |
-| Linear-Based       | FastLinSparseAdaptor | [Weng et al's](http://proceedings.mlr.press/v80/weng18a.html) linear bound propagation based verification approach. This implementation is accelerated by sparse matrix multiplication. Adaptor in `adaptor.cnncert_adaptor`. Core in `cnn_cert/`. |                                                              |
-| Linear-Based       | CNNCertAdaptor       | [Boopathy et al's](https://arxiv.org/abs/1811.12395) linear bound propagation based  verification approach. This approach extends FastLin and CROWN to general CNN/Residual/Sigmoid neural networks with high efficiency. Adaptor in `adaptor.cnncert_adaptor`. Core in `cnn_cert/`. |                                                              |
-| Linear-Based       | LPAllAdaptor         | LP-full verification approach, which computes $l$ and $u$ layerwise by linear programming. It is mentioned by [Boopathy et al](https://arxiv.org/abs/1811.12395), [Weng et al](http://proceedings.mlr.press/v80/weng18a.html), and analyzed by [Salman et al](https://arxiv.org/abs/1902.08722). Here, the adaptor is in `adaptor.cnncert_adaptor`. Core in `cnn_cert/` (we use Boopathy et al's implementation). |                                                              |
-| Linear-Based       | ZicoDualAdaptor      | [Wong et al's](http://arxiv.org/abs/1711.00851) linear dual-based verification approach. Adaptor in `adaptor.lpdual_adaptor`. Core in `convex_adversarial/`. |                                                              |
-| Linear-Based       | FullCrownAdaptor     | [Zhang et al's](https://arxiv.org/abs/1811.00866) linear bound propagation based verification approach. Adaptor in `adaptor.crown_adaptor`. Core in `crown_ibp/`. |                                                              |
-| Linear-Based       | CrownIBPAdaptor      | [Zhang et al's](https://arxiv.org/abs/1906.06316) linear + interval bound propagation based verification approach. Adaptor in `adaptor.crown_adaptor`. Core in `crown_ibp/`. |                                                              |
-| Linear-Based       | IBPAdaptor           | [Gowal et al's](https://arxiv.org/abs/1810.12715) interval propagation based verification approach. Adaptor in `adaptor.crown_adaptor`. Core in `crown_ibp/`. The re-implementation of our own is available at `adaptor.basic_adaptor.IBPAdaptor`, which has similar performance as Zhang et al's and Gowal et al's implementation. For simplicity, by default it uses Zhang et al's implementation. |                                                              |
-| Lipschitz          | FastLipAdaptor       | [Weng et al's](http://proceedings.mlr.press/v80/weng18a.html) Lipschitz based verification approach. Adaptor in `adaptor.recurjac_adaptor`. Core in `recurjac/`. |                                                              |
-| Lipschitz          | RecurJacAdaptor      | [Zhang et al's](https://arxiv.org/abs/1810.11783) Lipschitz based verification approach. Adaptor in `adaptor.recurjac_adaptor`. Core in `recurjac/`. |                                                              |
-| Lipschitz          | SpectralAdaptor      | [Szegedy et al's](https://arxiv.org/abs/1312.6199) Lipschitz (spectral bound) based verification approach. Adaptor in `adaptor.recurjac_adaptor`. Core in `recurjac/` (we leverage Zhang et al's implementation). |                                                              |
-| Branch and Bound   | AI2Adaptor           | [Gehr et al's](https://www.cs.rice.edu/~sc40/pubs/ai2.pdf) branch-and-bound based complete verification approach (concretely, domain of set of polyhedra). Adaptor in `adatpro.eran_adaptor`. Core in `eran/`. | Complete Verification                                        |
-| Linear-Based       | DeepPolyAdaptor      | [Singh et al's](https://files.sri.inf.ethz.ch/website/papers/DeepPoly.pdf) linear relaxation-based verification approach. Adaptor in `adatpro.eran_adaptor`. Core in `eran/`. |                                                              |
-| Hybrid             | RefineZonoAdaptor    | [Singh et al's](https://files.sri.inf.ethz.ch/website/papers/RefineZono.pdf) linear relaxation + MILP + IBP hybrid verification approach. Adaptor in `adatpro.eran_adaptor`. Core in `eran/`. |                                                              |
-| Linear-Based       | KReluAdaptor         | [Singh et al's](https://papers.nips.cc/paper/9646-beyond-the-single-neuron-convex-barrier-for-neural-network-certification) linear relaxation based verification approach with $l$ and $u$ refinement from multiple neuron's relaxation. Adaptor in `adatpro.eran_adaptor`. Core in `eran/`. |                                                              |
+| Approach Type      | ClassName            | Description & Path                                           | Comments                                                   |
+| ------------------ | -------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| *Normal Infernace* | CleanAdaptor         | The normal inference of the model. Implemented in `adaptor.basic_adaptor`. | Not a verification approach.                               |
+| *Empirical Attack* | PGDAdaptor           | Based on Python toolbox `cleverhans`. Implemented in `adaptor.basic_adaptor`. | Not a verification approach, just provide upper bound of r |
+| *Empirical Attack* | CWAdaptor            | Based on Python toolbox `cleverhans`. Implemented in `adaptor.basic_adaptor`. | Not a verification approach, just provide upper bound of r |
+| MILP               | MILPAdaptor          | Reimplementation of [Tjeng et al's](https://arxiv.org/abs/1711.07356) MILP-based verification based on Python's Gurobi API. Adaptor in `adaptor.basic_adaptor`. Core in `basic.fastmilp.MILPVerifier`. | Complete Verification                                      |
+| SDP                | PercySDPAdaptor      | Reimplementation of [Raghunathan et al's](https://arxiv.org/abs/1811.01057) SDP-based verification based on `cvxpy`. Adaptor in `adaptor.basic_adaptor`. Core in `basic.percysdp`. |                                                            |
+| SDP                | FazlybSDPAdaptor     | Reimplementation of [Fazlyb et al's](https://arxiv.org/abs/1903.01287) SDP-based verification based on `cvxpy`. Adaptor in `adaptor.basic_adaptor`. Core in `basic.components.BaselinePointVerifierExt`. |                                                            |
+| Linear-Based       | FastLinIBPAdaptor    | Reimplementation of the combination of IBP and FastLin bound ($l$ and $u$ per layer are the maximum or minimum of two bounds respectively). Adaptor in `adaptor.basic_adaptor`. Core in `basic.intervalbound`. |                                                            |
+| Linear-Based       | FastLinAdaptor       | [Weng et al's](http://proceedings.mlr.press/v80/weng18a.html) linear bound propagation based verification approach. Adaptor in `adaptor.recurjac_adaptor`. Core in `recurjac/`. |                                                            |
+| Linear-Based       | FastLinSparseAdaptor | [Weng et al's](http://proceedings.mlr.press/v80/weng18a.html) linear bound propagation based verification approach. This implementation is accelerated by sparse matrix multiplication. Adaptor in `adaptor.cnncert_adaptor`. Core in `cnn_cert/`. |                                                            |
+| Linear-Based       | CNNCertAdaptor       | [Boopathy et al's](https://arxiv.org/abs/1811.12395) linear bound propagation based  verification approach. This approach extends FastLin and CROWN to general CNN/Residual/Sigmoid neural networks with high efficiency. Adaptor in `adaptor.cnncert_adaptor`. Core in `cnn_cert/`. |                                                            |
+| Linear-Based       | LPAllAdaptor         | LP-full verification approach, which computes $l$ and $u$ layerwise by linear programming. It is mentioned by [Boopathy et al](https://arxiv.org/abs/1811.12395), [Weng et al](http://proceedings.mlr.press/v80/weng18a.html), and analyzed by [Salman et al](https://arxiv.org/abs/1902.08722). Here, the adaptor is in `adaptor.cnncert_adaptor`. Core in `cnn_cert/` (we use Boopathy et al's implementation). |                                                            |
+| Linear-Based       | ZicoDualAdaptor      | [Wong et al's](http://arxiv.org/abs/1711.00851) linear dual-based verification approach. Adaptor in `adaptor.lpdual_adaptor`. Core in `convex_adversarial/`. |                                                            |
+| Linear-Based       | FullCrownAdaptor     | [Zhang et al's](https://arxiv.org/abs/1811.00866) linear bound propagation based verification approach. Adaptor in `adaptor.crown_adaptor`. Core in `crown_ibp/`. |                                                            |
+| Linear-Based       | CrownIBPAdaptor      | [Zhang et al's](https://arxiv.org/abs/1906.06316) linear + interval bound propagation based verification approach. Adaptor in `adaptor.crown_adaptor`. Core in `crown_ibp/`. |                                                            |
+| Linear-Based       | IBPAdaptor           | [Gowal et al's](https://arxiv.org/abs/1810.12715) interval propagation based verification approach. Adaptor in `adaptor.crown_adaptor`. Core in `crown_ibp/`. The re-implementation of our own is available at `adaptor.basic_adaptor.IBPAdaptor`, which has similar performance as Zhang et al's and Gowal et al's implementation. For simplicity, by default it uses Zhang et al's implementation. |                                                            |
+| Lipschitz          | FastLipAdaptor       | [Weng et al's](http://proceedings.mlr.press/v80/weng18a.html) Lipschitz based verification approach. Adaptor in `adaptor.recurjac_adaptor`. Core in `recurjac/`. |                                                            |
+| Lipschitz          | RecurJacAdaptor      | [Zhang et al's](https://arxiv.org/abs/1810.11783) Lipschitz based verification approach. Adaptor in `adaptor.recurjac_adaptor`. Core in `recurjac/`. |                                                            |
+| Lipschitz          | SpectralAdaptor      | [Szegedy et al's](https://arxiv.org/abs/1312.6199) Lipschitz (spectral bound) based verification approach. Adaptor in `adaptor.recurjac_adaptor`. Core in `recurjac/` (we leverage Zhang et al's implementation). |                                                            |
+| Branch and Bound   | AI2Adaptor           | [Gehr et al's](https://www.cs.rice.edu/~sc40/pubs/ai2.pdf) branch-and-bound based complete verification approach (concretely, domain of set of polyhedra). Adaptor in `adatpro.eran_adaptor`. Core in `eran/`. | Complete Verification                                      |
+| Linear-Based       | DeepPolyAdaptor      | [Singh et al's](https://files.sri.inf.ethz.ch/website/papers/DeepPoly.pdf) linear relaxation-based verification approach. Adaptor in `adatpro.eran_adaptor`. Core in `eran/`. |                                                            |
+| Hybrid             | RefineZonoAdaptor    | [Singh et al's](https://files.sri.inf.ethz.ch/website/papers/RefineZono.pdf) linear relaxation + MILP + IBP hybrid verification approach. Adaptor in `adatpro.eran_adaptor`. Core in `eran/`. |                                                            |
+| Linear-Based       | KReluAdaptor         | [Singh et al's](https://papers.nips.cc/paper/9646-beyond-the-single-neuron-convex-barrier-for-neural-network-certification) linear relaxation based verification approach with $l$ and $u$ refinement from multiple neuron's relaxation. Adaptor in `adatpro.eran_adaptor`. Core in `eran/`. |                                                            |
 
 
 
@@ -143,9 +144,9 @@ To provide a uniform interface for them, we utilize the "adaptor design pattern"
 
 The `adaptor.adaptor.Adaptor` class should be initialized by dataset and model, and provides two main methods: `verify(self, input, label, norm_type, radius)` and `calc_radius(self, input, label, norm_type, upper=0.5, eps=1e-2)`.
 
-The `verify()` method receives the input, true label, $l_p$ norm type, and radius. It returns true or false. 
+The `verify()` method receives the input, true label, Lp norm type, and radius. It returns true or false. 
 
-The `calc_radius()` method receives the input, true label, $l_p$ norm type, the maximum possible radius, and the precision. It by default implements a binary-search based procedure which calls `verify()` multiples times to compute robustness radius.
+The `calc_radius()` method receives the input, true label, Lp norm type, the maximum possible radius, and the precision. It by default implements a binary-search based procedure which calls `verify()` multiples times to compute robustness radius.
 
 
 
@@ -181,6 +182,6 @@ For all other original parts, we allow free distribution of the code under the M
 
 ## Future Plans
 
-In the future, we also plan to provide an uniform interface for C++-based verification approaches, including Reluplex, Neurify, ReluVal, etc.
+We plan to provide an uniform interface for C++-based verification approaches, including Reluplex, Neurify, ReluVal, etc.
 
 For recently popular randomized smoothing series approaches, we may provide a separate tool in the future.
