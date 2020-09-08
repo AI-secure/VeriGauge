@@ -1,10 +1,10 @@
-# VeriGauge: United Toolbox for Major Robustness Verification Approaches for Deep Neural Networks
+# VeriGauge: Unified Toolbox for Representative Robustness Verification Approaches for Deep Neural Networks
 
 llylly (linyi2@illinois.edu, [linyil.com](http://linyil.com/)) @ Secure Learning Lab, UIUC
 
 
 
-This is a united toolbox containing representative robustness verification approaches for DNNs. The leader board for different approaches can be found here: https://github.com/AI-secure/Provable-Training-and-Verification-Approaches-Towards-Robust-Neural-Networks.
+This is a unified toolbox for representative robustness verification approaches for DNNs. The leader board for different approaches can be found here: https://github.com/AI-secure/Provable-Training-and-Verification-Approaches-Towards-Robust-Neural-Networks.
 
 Related paper: "SoK: Certified Robustness for Deep Neural Networks".
 
