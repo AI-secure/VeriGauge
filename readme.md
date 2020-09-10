@@ -6,7 +6,15 @@ llylly (linyi2@illinois.edu, [linyil.com](http://linyil.com/)) @ Secure Learning
 
 This is a unified toolbox for representative robustness verification approaches for DNNs. The leader board for different approaches can be found here: https://github.com/AI-secure/Provable-Training-and-Verification-Approaches-Towards-Robust-Neural-Networks.
 
-Related paper: "SoK: Certified Robustness for Deep Neural Networks".
+Related paper: [SoK: Certified Robustness for Deep Neural Networks](https://arxiv.org/abs/2009.04131).
+```
+@article{li2020sokcertified,
+  title={SoK: Certified Robustness for Deep Neural Networks},
+  author={Linyi Li and Xiangyu Qi and Tao Xie and Bo Li},
+  journal={arXiv preprint arXiv:2009.04131},
+  year={2020}
+}
+```
 
 - What is robustness verification for DNNs?
 
@@ -185,3 +193,4 @@ For all other original parts, we allow free distribution of the code under the M
 We plan to provide an uniform interface for C++-based verification approaches, including Reluplex, Neurify, ReluVal, etc.
 
 For recently popular randomized smoothing series approaches, we may provide a separate tool in the future.
+
