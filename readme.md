@@ -1,6 +1,6 @@
 # VeriGauge: Unified Toolbox for Representative Robustness Verification Approaches for Deep Neural Networks
 
-llylly (linyi2@illinois.edu, [linyil.com](http://linyil.com/)) @ Secure Learning Lab, UIUC
+Current Maintainer: llylly (linyi2@illinois.edu, [linyil.com](http://linyil.com/)) @ Secure Learning Lab, UIUC
 
 
 
