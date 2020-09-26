@@ -20,5 +20,5 @@ gurobipy==5.0.2
 Pillow==7.1.2
 posix_ipc==1.0.4
 setGPU==0.0.7
-tensorflow-gpu==1.15.2
+tensorflow-gpu==1.15.4
 waitGPU==0.0.3
