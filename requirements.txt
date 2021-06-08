@@ -17,7 +17,7 @@ onnx==1.5.0
 numba==0.48.0
 cdd==0.1.12
 gurobipy==5.0.2
-Pillow==7.1.2
+Pillow==8.2.0
 posix_ipc==1.0.4
 setGPU==0.0.7
 tensorflow-gpu==1.15.4
