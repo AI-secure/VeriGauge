@@ -4,7 +4,7 @@ Current Maintainer: llylly (linyi2@illinois.edu, [linyil.com](http://linyil.com/
 
 
 
-This is a unified toolbox for representative robustness verification approaches for DNNs. The leader board for different approaches can be found here: https://github.com/AI-secure/Provable-Training-and-Verification-Approaches-Towards-Robust-Neural-Networks.
+This is a unified toolbox for representative robustness verification approaches for DNNs. The leaderboard for different approaches can be found here: https://github.com/AI-secure/Provable-Training-and-Verification-Approaches-Towards-Robust-Neural-Networks.
 
 Related paper: [SoK: Certified Robustness for Deep Neural Networks](https://arxiv.org/abs/2009.04131).
 ```
