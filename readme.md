@@ -8,11 +8,12 @@ This is a unified toolbox for representative robustness verification approaches 
 
 Related paper: [SoK: Certified Robustness for Deep Neural Networks](https://arxiv.org/abs/2009.04131).
 ```
-@article{li2020sokcertified,
-  title={SoK: Certified Robustness for Deep Neural Networks},
-  author={Linyi Li and Xiangyu Qi and Tao Xie and Bo Li},
-  journal={arXiv preprint arXiv:2009.04131},
-  year={2020}
+@inproceedings{li2023sok,
+    title={SoK: Certified Robustness for Deep Neural Networks},
+    author={Linyi Li and Tao Xie and Bo Li},
+    booktitle={44th {IEEE} Symposium on Security and Privacy, {SP} 2023, San Francisco, CA, USA, 22-26 May 2023},
+    publisher={IEEE},
+    year={2023}
 }
 ```
 
